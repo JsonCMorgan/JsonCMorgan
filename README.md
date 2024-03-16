@@ -19,10 +19,9 @@ _(More projects will be added soon!)_
 
 ## Let's Connect!
 
-Feel free to reach out to me for collaborations or just a chat about data. I'm always open to connecting with fellow data enthusiasts!
+Feel free to reach out to me for collaborations or just a chat about data. I'm always open to connecting with fellow data enthusiasts and business leaders!
 
 - 🔗 [LinkedIn] (https://www.linkedin.com/in/jason-morgan-110656289/)
-- 🔗 [Other Social Media or Portfolio Site]
 
 ---
 
