@@ -1,10 +1,9 @@
 - 👋 Hi, I’m Jason Morgan
-- 👀 I’m interested in Data Analytics, Python, SQL, Machine Learning
-- 🌱 I’m currently learning SQL, Python
-- 💞️ I’m looking to collaborate on Data Analytics Projects
-- 📫 How to reach me email me at json.c.morgan@gmail.com
-- 😄 Pronouns: ... He/Him
-- ⚡ Fun fact: ... I have lost over 250 lbs through hard work and dedication
+- 👀 Proven intermediate knowledge in Data Analytics and SQL
+- 🌱 Working daily to maximize my skills in Python and Machine Learning
+- 💞️ I’m looking to consult on Data Analytics Projects
+- 📫 If you are looking to collaborate, email me at json.c.morgan@gmail.com
+- ⚡ Fun fact: Lover of all things geekdom (gaming, comics, D&D)
 
 ## Projects
 
