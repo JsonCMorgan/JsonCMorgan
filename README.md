@@ -1,32 +1,28 @@
-- 👋 Hi, I’m Jason Morgan
-- 👀 Proven intermediate knowledge in Data Analytics and SQL
-- 🌱 Working daily to maximize my skills in Python and Machine Learning
-- 💞️ I’m looking to consult on Data Analytics Projects
-- 📫 If you are looking to collaborate, email me at json.c.morgan@gmail.com
-- ⚡ Fun fact: Lover of all things geekdom (gaming, comics, D&D)
+# Jason Morgan
 
-## Projects
+Client-facing technical support background → building toward **junior SOC / cybersecurity analyst** roles in Canada.
 
-Below are some of the projects I've worked on. They showcase my ability to collect, clean, analyze, and visualize data:
+- 👋 Based in the Greater Toronto Area (remote / hybrid OK)
+- 🛡️ ISC² Certified in Cybersecurity (CC) · York University Certificate in Advanced Cyber Security (2024)
+- 🧰 Recent work: L1/L2 multi-channel support and triage at Legal Aid Ontario (PeopleSoft), plus 20+ years high-volume ops at Rogers
+- 🔭 Practice proof: Boundry.AI SOC tooling, Security Onion lab, OWASP Juice Shop AppSec lab
+- 📫 json.c.morgan@gmail.com · [LinkedIn](https://www.linkedin.com/in/jason-morgan-110656289/)
 
-1. **[Customer Data Project]** - [I cleaned, analyzed, and provided insights into some customer purchasing data I downloaded from kaggle.com.
-    - 🔗 [(https://github.com/JsonCMorgan/Customer-And-Sales-Data)]
+## What to look at first (hiring managers)
 
-2. **[Sales Data Project]** - [Cleaned, analyzed and provided insights into the sales portion of the data I downloaded from Kaggle.com].
-    - 🔗 [https://github.com/JsonCMorgan/Customer-And-Sales-Data]
+| Repo | What it shows |
+|---|---|
+| [boundry-ai-soc-platform](https://github.com/JsonCMorgan/boundry-ai-soc-platform) | Hands-on SOC workflow thinking: alert triage, investigation notes, reporting, SIEM-style event feed practice |
+| [security-onion-lab](https://github.com/JsonCMorgan/security-onion-lab) | Network security monitoring / detection practice in a home lab |
+| [juice-shop-lab](https://github.com/JsonCMorgan/juice-shop-lab) | OWASP Top 10 practice with remediation and detection notes |
 
-_(More projects will be added soon!)_
+Framing for employers: these are **portfolio / lab builds** that show how I learn security operations. Not a pitch for a competing security vendor.
 
-## Let's Connect!
+## Open to
 
-Feel free to reach out to me for collaborations or just a chat about data. I'm always open to connecting with fellow data enthusiasts and business leaders!
-
-- 🔗 [LinkedIn] (https://www.linkedin.com/in/jason-morgan-110656289/)
+- Junior SOC Analyst / Junior Cybersecurity Analyst / Security Operations Analyst
+- Technical / product / client support roles (cash-flow Track B) while I grow into cyber
 
 ---
 
-Thank you for visiting my GitHub profile!
-<!---
-JsonCMorgan/JsonCMorgan is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-You can click the Preview link to take a look at your changes.
---->
+Thanks for visiting.
