@@ -23,6 +23,10 @@ Framing for employers: these are **portfolio / lab builds** that show how I lear
 - Junior SOC Analyst / Junior Cybersecurity Analyst / Security Operations Analyst
 - Technical / product / client support roles (cash-flow Track B) while I grow into cyber
 
+## Cafe drills (phone quiz)
+
+See [`cafe-quiz/`](./cafe-quiz/) for a mobile PWA: flashcards + multiple choice on Boundry talk track, SOC jargon, and honest junior framing.
+
 ---
 
 Thanks for visiting.
