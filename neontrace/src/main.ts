@@ -427,6 +427,7 @@ async function runDemo() {
   renderModal();
   await sleep(3500);
   closeModal();
+  (window as unknown as { neontraceDemoDone: boolean }).neontraceDemoDone = true;
 }
 
 // ------------------------------------------------------------------ main loop
