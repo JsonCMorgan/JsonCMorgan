@@ -1,0 +1,50 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /neontrace
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    labels: [dependencies, area:build]
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      dev-tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+      runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+    ignore:
+      # Held below 6.1 for typescript-eslint; the TS 7 compiler is `@typescript/native`.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major, version-update:semver-minor]
+
+  - package-ecosystem: cargo
+    directory: /neontrace/src-tauri
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, area:desktop]
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      tauri:
+        patterns: ['tauri*']
+      cargo-minor:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, area:ci]
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']
