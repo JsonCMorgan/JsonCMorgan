@@ -1,0 +1,52 @@
+name: Bug report
+description: Something in NEONTRACE is broken or behaves wrong
+title: 'bug: '
+labels: [type:bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the report. The more exact the steps, the faster the fix.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The exact commands you typed help most. Paste terminal output if you can.
+      placeholder: |
+        1. Start a fresh op (?fresh)
+        2. nmap -sV 10.0.0.1
+        3. connect 10.0.0.1
+        4. ...
+    validations:
+      required: true
+  - type: input
+    id: seed
+    attributes:
+      label: Network seed
+      description: Shown by `status`, or the `?seed=` in the URL. Lets us replay the same network.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where are you playing?
+      options:
+        - Browser (npm run dev)
+        - Windows app
+        - macOS app
+        - Linux app
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag (e.g. neontrace-v0.2.0) or commit SHA.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, console errors, anything else

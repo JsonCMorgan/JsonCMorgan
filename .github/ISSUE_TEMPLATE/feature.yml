@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest a new mechanic, tool, UI improvement or system
+title: 'feat: '
+labels: [type:feature, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What should the game do?
+      description: Describe the player experience you want, not just the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+      description: More fun, smoother onboarding, teaches a real concept, better replayability?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Breach tools and layers
+        - Trace / SOC reaction
+        - Roguelite loop (runs, hub, unlocks)
+        - Workshop (player-built tools)
+        - Scripting (Bash / Python)
+        - Index (learning)
+        - UI, effects, audio
+        - Desktop app / installers
+        - Other
+  - type: textarea
+    id: real-world
+    attributes:
+      label: Real-world security concept (optional)
+      description: If it maps to a real technique, name it (and the MITRE ATT&CK ID if you know it).
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Done when
+      description: A short checklist that would let someone call this finished.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
