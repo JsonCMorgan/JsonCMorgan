@@ -1,0 +1,37 @@
+name: Seed roadmap
+
+# One-click, re-runnable: creates the M2 to M6 milestones and issues from
+# .github/roadmap/roadmap.json. Existing titles are skipped.
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Only print what would be created
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    name: Seed milestones and issues
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Sync labels first
+        if: ${{ !inputs.dry-run }}
+        uses: crazy-max/ghaction-github-labeler@548a7c3603594ec17c819e1239f281a3b801ab4d # v6.0.0
+        with:
+          yaml-file: .github/labels.yml
+          skip-delete: true
+      - name: Seed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry-run && '--dry-run' || '' }}
+        run: node .github/roadmap/seed.mjs $DRY_RUN
