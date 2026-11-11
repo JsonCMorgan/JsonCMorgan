@@ -109,18 +109,34 @@ export class GameTerminal {
   /** Animated typing for guide chips and the demo. */
   async typeAndRun(cmd: string, cps = 28) {
     if (this.typing) return;
-    this.typing = true;
     this.buf = '';
     this.cursor = 0;
     this.render();
-    for (const ch of cmd) {
-      this.buf += ch;
+    await this.typeText(cmd, cps);
+    this.enter();
+  }
+
+  async typeText(text: string, cps = 28) {
+    this.typing = true;
+    for (const ch of text) {
+      this.buf = this.buf.slice(0, this.cursor) + ch + this.buf.slice(this.cursor);
       this.cursor++;
-      this.term.write(ch);
+      this.render();
       this.hooks.onKey?.();
       await new Promise((r) => setTimeout(r, 1000 / cps));
     }
     this.typing = false;
+  }
+
+  pressTab() {
+    this.tab();
+  }
+
+  pressUp() {
+    this.onData('\x1b[A');
+  }
+
+  pressEnter() {
     this.enter();
   }
 

@@ -29,6 +29,7 @@ Handy URL options:
 | `?fresh` | Wipe the save and start over |
 | `?seed=1234` | Play a specific network seed |
 | `?demo` | Attract mode: the game plays a contract by itself |
+| `?tutorialdemo` | Attract mode: the game plays the training sim by itself |
 
 ### As a PC app (Tauri)
 
@@ -52,6 +53,24 @@ Installers land in `src-tauri/target/release/bundle/`:
 The workflow in `.github/workflows/neontrace.yml` builds Windows, macOS and Linux installers on every push to `main` that touches `neontrace/`, and on pull requests. Open the workflow run on GitHub and download `neontrace-windows` from the Artifacts section. Pushing a tag like `neontrace-v0.1.0` also creates a draft GitHub Release with the installers attached.
 
 ## How to play
+
+### Training sim (first launch)
+
+A new profile starts in Vex's training sim, a safe three-box network (`dojo-gw`, `dojo-vault`, `dojo-cache`). Real contracts stay locked until you finish it. Vex walks you through one command at a time and the game checks each one before moving on:
+
+1. Shell basics: `help`, `pwd`, `ls`, `cd`, TAB completion, history (up arrow), pipes and `grep`, `man`.
+2. `mail` and the `jobs` board.
+3. `nmap`, `connect`, `scan`, `dc` and the network map.
+4. A twist: crack the vault head on and the firewall drops you. Then `fwrules`, own the trusted gateway, and pivot with `fwbypass`.
+5. RAM: run `sshbrute` and `webscan` in parallel.
+6. The trace: Vex spikes it to 78% so you see what 50, 75 and 100% mean, then you read `index the-trace`.
+7. `getroot`, `scp` a file home, `grep` an auth log for the intruder, `submit` the drill and get paid.
+8. `rm` the logs, `dc`, and spend your pay in the `shop`.
+9. A final exam with no hand-holding: bring home the graduation key from the third box. Type `hint` if you get stuck.
+
+The trace is capped at 99% in the sim, so nothing you do there can end the run. Typos get a "did you mean" and a reminder of what the step wants. When you graduate, Vex points you at the Workshop. Replay any time with `tutorial` or the TRAIN button (your real op is saved and restored), or `tutorial skip` to leave a replay early.
+
+### The breach loop
 
 The **NEXT STEP** panel on the left always shows what to do and the exact command. Click the command to have it typed for you, or type it yourself. Turn the guide off with the GUIDE button once you know the ropes.
 
@@ -87,17 +106,18 @@ neontrace/
     vfs.ts           in-memory filesystem per host
     network.ts       seeded network generator (hosts, ports, firewall, logs)
     tools.ts         common ToolDef interface + breach tools + registry
+    tutorial.ts      training sim steps and their checks
     game.ts          state, commands, process manager, trace meter, contracts, hints, saves
     content/         Index entries, contracts, shop items (plain data)
   src/ui/            xterm.js line editor, panels, netmap, DOM patcher, synth audio
   src/main.ts        wires the engine to the UI
   src-tauri/         Tauri 2 desktop shell
-  tests/             vitest suites: parser, network sim, breach logic, full playthrough
+  tests/             vitest suites: parser, network sim, breach logic, training sim
 ```
 
 ## Tests
 
 ```bash
-npm test          # vitest: parser, network sim, breach logic, a full guided playthrough
+npm test          # vitest: parser, network sim, breach logic, training sim steps, full playthroughs
 npm run build     # typecheck + production web build
 ```

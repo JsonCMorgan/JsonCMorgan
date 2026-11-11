@@ -3,9 +3,10 @@ import { CONTRACT_BY_ID, CONTRACTS, ContractId } from './content/contracts';
 import { INDEX_BY_ID, INDEX_ENTRIES } from './content/index-entries';
 import { SHOP_BY_ID, SHOP_ITEMS } from './content/shop';
 import type { GameEvent } from './events';
-import { findHost, generateWorld, Host, openPortCount, scanLinks, World } from './network';
+import { findHost, generateTrainingWorld, generateWorld, Host, openPortCount, scanLinks, TRAINING_INTRUDER_IP, World } from './network';
 import { parseLine, parseOpts, ParseError } from './parser';
 import { defaultRegistry, ToolContext, ToolDef, ToolRegistry } from './tools';
+import { StepCtx, TUTORIAL_PAY_FIRST, TUTORIAL_PAY_REPLAY, TUTORIAL_STEPS } from './tutorial';
 import { FsError, resolvePath, VFS } from './vfs';
 
 export const BASE_RAM = 512;
@@ -43,6 +44,7 @@ export interface Profile {
   extracted: number;
   nextSeed: number;
   sound: boolean;
+  tutorialDone: boolean;
 }
 
 export interface RunState {
@@ -60,11 +62,19 @@ export interface RunState {
   mails: Mail[];
   traced: boolean;
   elapsed: number;
+  tutorial?: { step: number; paid: boolean };
 }
 
 export interface SaveData {
   profile: Profile;
   run: RunState;
+  /** The real op parked while the training sim is replayed. */
+  stash?: RunState | null;
+}
+
+export interface GameOptions {
+  /** Start a brand-new profile in the training sim (default true). */
+  tutorial?: boolean;
 }
 
 type Cmd = (args: string[], stdin: string[] | null) => string[];
@@ -87,6 +97,7 @@ export function newProfile(seed: number): Profile {
     extracted: 0,
     nextSeed: seed,
     sound: true,
+    tutorialDone: false,
   };
 }
 
@@ -96,17 +107,23 @@ export class Game {
   registry: ToolRegistry;
   private listeners: ((e: GameEvent) => void)[] = [];
   private commands: Record<string, Cmd>;
+  stash: RunState | null = null;
+  private lastLine: string | undefined;
+  private tabUsed = false;
 
-  constructor(save?: SaveData | null, seed = Date.now() % 1_000_000) {
+  constructor(save?: SaveData | null, seed = Date.now() % 1_000_000, opts: GameOptions = {}) {
     this.registry = defaultRegistry();
     this.commands = this.buildCommands();
     if (save && save.profile?.version === SAVE_VERSION && save.run?.world) {
       this.profile = save.profile;
+      this.profile.tutorialDone ??= this.profile.totalEarned > 0 || this.profile.runs > 1;
       this.run = save.run;
       this.run.procs = [];
+      this.stash = save.stash ?? null;
     } else {
       this.profile = newProfile(seed);
-      this.startRun();
+      if (opts.tutorial === false) this.startRun();
+      else this.startTutorial();
     }
   }
 
@@ -123,7 +140,7 @@ export class Game {
   }
 
   serialize(): SaveData {
-    return JSON.parse(JSON.stringify({ profile: this.profile, run: { ...this.run, procs: [] } }));
+    return JSON.parse(JSON.stringify({ profile: this.profile, run: { ...this.run, procs: [] }, stash: this.stash }));
   }
 
   // ---------------------------------------------------------------- run lifecycle
@@ -169,6 +186,111 @@ export class Game {
     this.addMail('Vex', m.subject, m.body);
   }
 
+  // ---------------------------------------------------------------- tutorial
+  get inTutorial(): boolean {
+    return !!this.run?.tutorial;
+  }
+
+  shopItems() {
+    return SHOP_ITEMS;
+  }
+
+  startTutorial(): string[] {
+    if (this.run && !this.run.tutorial && !this.run.traced) this.stash = this.run;
+    this.run = {
+      world: generateTrainingWorld(),
+      connected: null,
+      cwd: '/',
+      homeCwd: '/home/ghost',
+      heat: 0,
+      flagged: false,
+      passed50: false,
+      contracts: { c1: 'locked', c2: 'locked', c3: 'locked' },
+      procs: [],
+      nextPid: 100,
+      earned: 0,
+      mails: [],
+      traced: false,
+      elapsed: 0,
+      tutorial: { step: 0, paid: false },
+    };
+    this.tabUsed = false;
+    this.addMail('Vex', 'TRAINING // Welcome to the sim', [
+      'Ghost. You are in my training sim: two fake boxes, a fake firewall, a fake SOC.',
+      'I walk you through one step at a time. Type what I ask and the sim checks it.',
+      'Your trace can never hit 100% in here, so experiment.',
+      'Clear the sim and the real contract board unlocks. Pays a little too.',
+    ]);
+    this.emit({ type: 'newRun' });
+    return this.tutorialStepLines();
+  }
+
+  /** The instruction block for the current step. */
+  tutorialStepLines(): string[] {
+    const t = this.run.tutorial;
+    if (!t) return [];
+    const step = TUTORIAL_STEPS[t.step];
+    const cmd = step.unguided ? undefined : typeof step.cmd === 'function' ? step.cmd(this) : step.cmd;
+    return [
+      '',
+      c.magenta(`┌─ TRAINING ${t.step + 1}/${TUTORIAL_STEPS.length} ─ `) + c.bold(c.white(step.title)),
+      ...step.say.map((l) => c.magenta('│ ') + c.cyan('VEX ▸ ') + l),
+      ...(cmd ? [c.magenta('└─ ') + c.dim('type: ') + c.yellow(cmd)] : [c.magenta('└─ ') + c.dim('no hand-holding. hint if stuck')]),
+    ];
+  }
+
+  private tutorialCheck(ctx: StepCtx): string[] {
+    const t = this.run.tutorial;
+    if (!t) return [];
+    const out: string[] = [];
+    let first = true;
+    while (this.run.tutorial && t.step < TUTORIAL_STEPS.length) {
+      const step = TUTORIAL_STEPS[t.step];
+      const probe = first ? ctx : { ...ctx, line: undefined, names: [], args: [] };
+      if (!step.check(this, probe)) {
+        if (first && ctx.line) {
+          const n = step.nudge?.(this, ctx);
+          if (n) out.push(c.yellow(n));
+        }
+        break;
+      }
+      first = false;
+      out.push(c.green(`  ✔ ${step.title}`));
+      this.emit({ type: 'sound', sound: 'success' });
+      t.step++;
+      this.tabUsed = false;
+      if (t.step >= TUTORIAL_STEPS.length) {
+        out.push(...this.finishTutorial());
+        break;
+      }
+      TUTORIAL_STEPS[t.step].onEnter?.(this);
+      out.push(...this.tutorialStepLines());
+    }
+    return out;
+  }
+
+  finishTutorial(skipped = false): string[] {
+    const firstTime = !this.profile.tutorialDone;
+    this.profile.tutorialDone = true;
+    const stash = this.stash;
+    this.stash = null;
+    if (stash) {
+      this.run = stash;
+      this.run.procs = [];
+      this.emit({ type: 'newRun' });
+    } else this.startRun();
+    this.emit({ type: 'toast', kind: 'success', title: skipped ? 'TRAINING SKIPPED' : 'TRAINING COMPLETE', body: 'Real contracts unlocked.' });
+    if (!skipped) this.emit({ type: 'fx', fx: 'granted' });
+    return [
+      '',
+      c.green(c.bold(skipped ? '  ▸ TRAINING SKIPPED.' : '  ▸ TRAINING COMPLETE. You are cleared for real work.')),
+      ...(firstTime && !skipped
+        ? [c.cyan('  VEX ▸ ') + 'Next up, the Workshop: once you have a few real jobs behind you, you build your own tools.']
+        : []),
+      c.cyan(`  ${stash ? 'Back to your op' : 'New op loaded'}: ${this.world.org}. Type mail for your first real job.`),
+    ];
+  }
+
   get world(): World {
     return this.run.world;
   }
@@ -195,7 +317,7 @@ export class Game {
   addHeat(n: number) {
     if (this.run.traced) return;
     const mul = this.run.flagged && n > 0 ? 1.5 : 1;
-    this.run.heat = Math.max(0, Math.min(100, this.run.heat + n * mul));
+    this.run.heat = Math.max(0, Math.min(this.run.tutorial ? 99 : 100, this.run.heat + n * mul));
     if (!this.run.passed50 && this.run.heat >= 50) {
       this.run.passed50 = true;
       this.emit({ type: 'toast', kind: 'warn', title: 'TRACE 50%', body: 'A SOC analyst is correlating your activity.' });
@@ -243,6 +365,10 @@ export class Game {
       tool.complete(this.toolCtx(host, p.args));
       this.checkContracts();
     }
+    if (this.run.tutorial) {
+      const lines = this.tutorialCheck({ names: [], args: [], ownedBefore: this.profile.owned.length, usedTab: this.tabUsed });
+      if (lines.length) this.print(lines);
+    }
   }
 
   // ---------------------------------------------------------------- index / money
@@ -288,6 +414,7 @@ export class Game {
 
   checkContracts() {
     const r = this.run;
+    if (r.tutorial) return;
     if (r.contracts.c1 === 'active' && this.world.hosts.filter((h) => h.role !== 'home').every((h) => h.fingerprinted)) {
       this.completeContract('c1');
     }
@@ -361,6 +488,9 @@ export class Game {
       return [c.red(`neosh: ${(e as ParseError).message}`)];
     }
     if (!pipeline.length) return [];
+    const prevLine = this.lastLine;
+    this.lastLine = line.trim();
+    const ownedBefore = this.profile.owned.length;
     let stdin: string[] | null = null;
     let out: string[] = [];
     try {
@@ -369,18 +499,64 @@ export class Game {
         const cmd = this.commands[name];
         if (cmd) out = cmd(args, stdin);
         else if (this.registry.get(name)) out = this.launchTool(name, args);
-        else err(`${name}: command not found. Try help.`);
+        else {
+          const guess = this.suggest(name);
+          err(`${name}: command not found.${guess ? ` Did you mean ${guess}?` : ' Try help.'}`);
+        }
         if (i < pipeline.length - 1) stdin = out.map(stripAnsi);
       }
     } catch (e) {
       if (e instanceof CmdError || e instanceof FsError) {
         this.emit({ type: 'sound', sound: 'error' });
-        return [c.red(e.message)];
+        const out = [c.red(e.message)];
+        if (this.run.tutorial) {
+          const extra = this.tutorialCheck({
+            line: line.trim(),
+            names: pipeline.map((p) => p.name),
+            args: pipeline.map((p) => p.args),
+            prevLine,
+            error: e.message,
+            ownedBefore,
+            usedTab: this.tabUsed,
+          });
+          if (extra.length) out.push(...extra);
+          else {
+            const h = this.nextHint();
+            if (h.cmd && !TUTORIAL_STEPS[this.run.tutorial.step].unguided) out.push(c.cyan('VEX ▸ ') + `No harm done in the sim. This step wants: ${c.yellow(h.cmd)}`);
+          }
+        }
+        return out;
       }
       throw e;
     }
     this.checkContracts();
+    if (this.run.tutorial) {
+      out = out.concat(
+        this.tutorialCheck({
+          line: line.trim(),
+          names: pipeline.map((p) => p.name),
+          args: pipeline.map((p) => p.args),
+          prevLine,
+          ownedBefore,
+          usedTab: this.tabUsed,
+        }),
+      );
+    }
     return out;
+  }
+
+  private suggest(name: string): string | null {
+    const names = [...Object.keys(this.commands), ...this.registry.all().map((t) => t.id)];
+    let best: string | null = null;
+    let bestD = 3;
+    for (const n of names) {
+      const d = editDistance(name.toLowerCase(), n);
+      if (d < bestD) {
+        bestD = d;
+        best = n;
+      }
+    }
+    return best;
   }
 
   prompt(): string {
@@ -404,6 +580,12 @@ export class Game {
   }
 
   completions(partial: string): string[] {
+    const res = this.completionsFor(partial);
+    if (res.length) this.tabUsed = true;
+    return res;
+  }
+
+  private completionsFor(partial: string): string[] {
     const words = partial.split(/\s+/);
     if (words.length <= 1) {
       const names = [...Object.keys(this.commands), ...this.registry.all().filter((t) => this.toolAvailable(t)).map((t) => t.id)];
@@ -434,7 +616,7 @@ export class Game {
   }
 
   // ---------------------------------------------------------------- hint system
-  nextHint(): { text: string; cmd?: string } {
+  nextHint(reveal = false): { text: string; cmd?: string } {
     const w = this.world;
     const r = this.run;
     const gw = findHost(w, w.gatewayIp)!;
@@ -443,6 +625,12 @@ export class Game {
     const at = this.connectedHost;
     const running = (tool: string, ip: string) => r.procs.some((p) => p.toolId === tool && p.target === ip);
     if (r.traced) return { text: 'You were traced. Press ENTER to start a new op.' };
+    if (r.tutorial) {
+      const step = TUTORIAL_STEPS[r.tutorial.step];
+      const cmd = typeof step.cmd === 'function' ? step.cmd(this) : step.cmd;
+      if (step.unguided && !reveal) return { text: `${step.title}. No step-by-step: type hint if you get stuck.` };
+      return { text: step.title, cmd };
+    }
     if (r.heat > 65) {
       if (at && at.root && at.alerted && !at.cleaned) return { text: 'Trace is hot. Scrub this box\'s logs to clear its alert.', cmd: 'rm /var/log/*' };
       if (at?.alerted) return { text: 'Trace is hot. Disconnect so the SOC loses your session.', cmd: 'dc' };
@@ -501,10 +689,11 @@ export class Game {
         c.magenta(' BREACH  ') + 'nmap  fwrules  fwbypass  sshbrute  webscan  getroot  ps  kill',
         c.magenta(' JOBS    ') + 'mail  jobs  submit <job> <answer>  jackout',
         c.magenta(' RIG     ') + 'shop  buy <item>  index [entry]  tools  man <tool>  workshop  status',
+        c.magenta(' TRAIN   ') + `tutorial  ${c.dim('(replay the training sim)')}  tutorial skip`,
         c.magenta(' HELP    ') + `hint  clear   ${c.dim('(TAB completes, ↑↓ history, pipes with |)')}`,
       ],
       hint: () => {
-        const h = this.nextHint();
+        const h = this.nextHint(true);
         return [c.yellow('► ') + h.text + (h.cmd ? '   ' + c.cyan(h.cmd) : '')];
       },
       clear: () => {
@@ -726,6 +915,12 @@ export class Game {
       },
       jobs: () => {
         const lines = [c.bold(c.cyan(`CONTRACT BOARD // ${this.world.org}`))];
+        if (this.run.tutorial) {
+          lines.push(`${this.run.tutorial.paid ? c.green('DONE  ') : c.yellow('ACTIVE')} ${c.magenta('drill')}  ${pad('Training Sim', 18)} ${pad(c.dim('Tutorial'), 18)} ${c.yellow((this.profile.tutorialDone ? TUTORIAL_PAY_REPLAY : TUTORIAL_PAY_FIRST) + '¢')}`);
+          for (const def of CONTRACTS) lines.push(`${c.dim('LOCKED')} ${c.dim(def.id)}  ${c.dim(pad(def.title, 18))} ${c.dim('finish training to unlock')}`);
+          this.emit({ type: 'open', panel: 'jobs' });
+          return lines;
+        }
         for (const def of CONTRACTS) {
           const st = this.run.contracts[def.id];
           const badge = st === 'done' ? c.green('DONE  ') : st === 'active' ? c.yellow('ACTIVE') : c.dim('LOCKED');
@@ -738,6 +933,20 @@ export class Game {
       contracts: (a, s) => this.commands.jobs(a, s),
       submit: (args) => {
         const [id, answer] = args as [ContractId, string];
+        if ((id as string) === 'drill') {
+          const t = this.run.tutorial;
+          if (!t) err('submit: there is no training drill running');
+          if (t!.paid) err('submit: drill already paid');
+          if (!answer) err('usage: submit drill <ip>');
+          if (answer.trim() !== TRAINING_INTRUDER_IP) {
+            this.emit({ type: 'sound', sound: 'error' });
+            return [c.red(`Vex: "${answer}? That one is not it. The gateway login is legit. Find the outside IP."`)];
+          }
+          t!.paid = true;
+          const amount = this.profile.tutorialDone ? TUTORIAL_PAY_REPLAY : TUTORIAL_PAY_FIRST;
+          this.pay(amount, 'Training drill');
+          return [c.green(c.bold('  ✔ DRILL COMPLETE: Training Sim')) + c.yellow(`  +${amount} ¢`)];
+        }
         const def = CONTRACT_BY_ID[id];
         if (!def) err('usage: submit <job-id> <answer>   e.g. submit c3 203.0.113.50');
         if (!def.answer) err(`submit: ${id} completes automatically when its objective is met`);
@@ -871,7 +1080,18 @@ export class Game {
           `  record    ${this.profile.extracted} extracted, ${this.profile.traced} traced`,
         ];
       },
+      tutorial: (args) => {
+        if (args[0] === 'skip') {
+          if (!this.run.tutorial) err('tutorial: you are not in training');
+          if (!this.profile.tutorialDone) err('tutorial: finish training once before you can skip it. Vex insists.');
+          return this.finishTutorial(true);
+        }
+        if (this.run.tutorial) return [c.dim(`Training step ${this.run.tutorial.step + 1}/${TUTORIAL_STEPS.length}.`), ...this.tutorialStepLines()];
+        this.emit({ type: 'clear' });
+        return [c.magenta('Loading Vex training sim...') + c.dim(' Your current op is parked and resumes when you finish or skip.'), ...this.startTutorial()];
+      },
       jackout: (args) => {
+        if (this.run.tutorial) err(this.profile.tutorialDone ? 'jackout: in training. Use tutorial skip to leave.' : 'jackout: finish training first. Vex is watching.');
         const allDone = Object.values(this.run.contracts).every((s) => s === 'done');
         if (!allDone && !args.includes('--force')) {
           return [c.yellow('Jobs still open. Extracting now forfeits them. Use jackout --force to bail.')];
@@ -894,4 +1114,15 @@ export class Game {
     const src = stdin ?? this.commands.cat(o.positional, null);
     return which === 'head' ? src.slice(0, n) : src.slice(-n);
   }
+}
+
+function editDistance(a: string, b: string): number {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+  }
+  return dp[a.length][b.length];
 }

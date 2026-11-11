@@ -25,11 +25,14 @@ import {
 } from './ui/panels';
 import { morph } from './ui/morph';
 import { GameTerminal } from './ui/terminal';
+import { TUTORIAL_STEPS } from './engine/tutorial';
+import { TRAINING_INTRUDER_IP, TRAINING_VAULT_IP } from './engine/network';
 
 const SAVE_KEY = 'neontrace-save-v1';
 const PREFS_KEY = 'neontrace-prefs-v1';
 const params = new URLSearchParams(location.search);
 const demoMode = params.has('demo');
+const tutorialDemo = params.has('tutorialdemo');
 if (params.has('fresh')) localStorage.removeItem(SAVE_KEY);
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -47,7 +50,7 @@ const savePrefs = () => localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
 
 const hadSave = !!loadSave();
 const seedParam = params.get('seed');
-let game = new Game(loadSave(), seedParam ? Number(seedParam) : undefined);
+let game = new Game(loadSave(), seedParam ? Number(seedParam) : undefined, { tutorial: !demoMode });
 const synth = new Synth();
 synth.enabled = game.profile.sound;
 
@@ -270,6 +273,11 @@ $('#btn-mail').addEventListener('click', () => openModal('mail'));
 $('#btn-jobs').addEventListener('click', () => openModal('jobs'));
 $('#btn-shop').addEventListener('click', () => openModal('shop'));
 $('#btn-index').addEventListener('click', () => openModal('index'));
+$('#btn-train').addEventListener('click', () => {
+  if (game.run.tutorial) return term.focus();
+  term.print([c.dim('$ tutorial')]);
+  runCommand('tutorial');
+});
 $('#sound-btn').addEventListener('click', () => {
   game.profile.sound = !game.profile.sound;
   synth.enabled = game.profile.sound;
@@ -285,7 +293,10 @@ $('#guide').addEventListener('click', (ev) => {
   const chip = (ev.target as HTMLElement).closest<HTMLElement>('[data-cmd]');
   if (!chip) return;
   const cmd = chip.dataset.cmd!;
-  if (cmd.includes('<')) term.setInput(cmd.replace(/<.*$/, ''));
+  const stepId = game.run.tutorial ? TUTORIAL_STEPS[game.run.tutorial.step].id : '';
+  if (cmd.startsWith('↑')) term.pressUp();
+  else if (stepId === 'tab') term.setInput('cat brea');
+  else if (cmd.includes('<')) term.setInput(cmd.replace(/<.*$/, ''));
   else void term.typeAndRun(cmd);
 });
 $('#netmap').addEventListener('click', (ev) => {
@@ -345,6 +356,14 @@ async function boot(short = false) {
     synth.play('blip');
     await sleep(short ? 120 : 260);
   }
+  if (game.inTutorial) {
+    term.writeRaw('\r\n' + c.yellow('>> VEX TRAINING SIM loaded.') + c.dim(' Follow Vex one step at a time. The NEXT STEP panel shows what to type.') + '\r\n');
+    term.writeRaw(game.tutorialStepLines().join('\r\n') + '\r\n\r\n');
+    term.locked = false;
+    term.showPrompt();
+    term.focus();
+    return;
+  }
   const unread = game.run.mails.filter((m) => !m.read).length;
   term.writeRaw(
     '\r\n' +
@@ -364,30 +383,48 @@ function showTitle() {
     <div class="logo glitch-title" data-text="NEONTRACE">NEONTRACE</div>
     <div class="tagline">BREACH. GET PAID. <span>DON'T GET TRACED.</span></div>
     <div class="title-btns">
-      <button class="big-btn" id="jack-in">${cont ? `CONTINUE // OP #${game.profile.runs} · ${game.profile.credits}¢` : 'JACK IN ▸'}</button>
-      ${cont ? '<button class="ghost-btn" id="wipe">NEW GAME (wipe save)</button>' : ''}
+      <button class="big-btn" id="jack-in">${
+        game.inTutorial
+          ? game.profile.tutorialDone || (game.run.tutorial?.step ?? 0) > 0
+            ? `RESUME TRAINING // STEP ${(game.run.tutorial?.step ?? 0) + 1}`
+            : 'JACK IN ▸'
+          : cont
+            ? `CONTINUE // OP #${game.profile.runs} · ${game.profile.credits}¢`
+            : 'JACK IN ▸'
+      }</button>
+      <div class="row">
+        ${game.profile.tutorialDone && !game.inTutorial ? '<button class="ghost-btn" id="train">TRAINING SIM</button>' : ''}
+        ${cont ? '<button class="ghost-btn" id="wipe">NEW GAME (wipe save)</button>' : ''}
+      </div>
     </div>
+    ${game.inTutorial && !game.profile.tutorialDone ? '<div class="first-note">First time? Vex runs you through a training sim before the real contracts unlock.</div>' : ''}
     <div class="press">press ENTER</div>
     <div class="disclaimer">Every network, host and target in this game is simulated. Real techniques, fictional victims.</div>
   </div>`;
-  const go = () => {
+  const go = (training = false) => {
     window.removeEventListener('keydown', onKey);
     t.classList.add('out');
     synth.play('granted');
     setTimeout(() => (t.hidden = true), 600);
+    if (training && !game.inTutorial) {
+      game.startTutorial();
+      persist();
+    }
     void boot().then(() => {
       if (demoMode) void runDemo();
+      if (tutorialDemo) void runTutorialDemo();
     });
   };
   const onKey = (e: KeyboardEvent) => e.key === 'Enter' && go();
   window.addEventListener('keydown', onKey);
-  $('#jack-in').addEventListener('click', go);
+  $('#jack-in').addEventListener('click', () => go());
+  $('#train')?.addEventListener('click', () => go(true));
   $('#wipe')?.addEventListener('click', () => {
     if (!confirm('Wipe your save and start over?')) return;
     localStorage.removeItem(SAVE_KEY);
     location.reload();
   });
-  if (demoMode) setTimeout(go, 1800);
+  if (demoMode || tutorialDemo) setTimeout(() => go(), 2200);
 }
 
 // ------------------------------------------------------------------ demo / attract mode
@@ -427,6 +464,62 @@ async function runDemo() {
   renderModal();
   await sleep(3500);
   closeModal();
+  (window as unknown as { neontraceDemoDone: boolean }).neontraceDemoDone = true;
+}
+
+async function runTutorialDemo() {
+  const pause = (ms: number) => sleep(ms);
+  const step = () => (game.run.tutorial ? TUTORIAL_STEPS[game.run.tutorial.step].id : 'done');
+  const type = async (cmd: string) => {
+    await term.typeAndRun(cmd, 24);
+    await waitIdle();
+  };
+  let askedHint = false;
+  for (let i = 0; i < 70 && game.inTutorial; i++) {
+    await pause(1300);
+    const id = step();
+    if (id === 'tab') {
+      await term.typeText('cat brea', 20);
+      await pause(500);
+      term.pressTab();
+      await pause(700);
+      term.pressEnter();
+      await waitIdle();
+    } else if (id === 'history') {
+      term.pressUp();
+      await pause(900);
+      term.pressEnter();
+      await waitIdle();
+    } else if (id === 'parallel') {
+      await term.typeAndRun(`sshbrute ${TRAINING_VAULT_IP}`, 24);
+      await pause(500);
+      await type(`webscan ${TRAINING_VAULT_IP}`);
+    } else if (id === 'submit') {
+      await type(`submit drill ${TRAINING_INTRUDER_IP}`);
+    } else if (id === 'index') {
+      await type('index the-trace');
+      await pause(3200);
+      closeModal();
+    } else if (id === 'shop') {
+      await type('shop');
+      await pause(1600);
+      document.querySelector<HTMLElement>('[data-buy="ram-512"]')?.click();
+      await pause(1800);
+      closeModal();
+      await waitIdle();
+    } else if (id === 'jobs' || id === 'mail') {
+      await type(id);
+      await pause(1600);
+      if (modal) closeModal();
+    } else if (id === 'graduation' && !askedHint) {
+      askedHint = true;
+      await type('hint');
+    } else {
+      const cmd = game.nextHint(true).cmd;
+      if (cmd) await type(cmd);
+    }
+  }
+  await pause(4000);
   (window as unknown as { neontraceDemoDone: boolean }).neontraceDemoDone = true;
 }
 

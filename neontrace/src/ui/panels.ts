@@ -1,6 +1,7 @@
 import { CONTRACTS } from '../engine/content/contracts';
 import { INDEX_BY_ID, INDEX_ENTRIES } from '../engine/content/index-entries';
 import { SHOP_ITEMS } from '../engine/content/shop';
+import { TUTORIAL_PAY_FIRST, TUTORIAL_PAY_REPLAY, TUTORIAL_STEPS } from '../engine/tutorial';
 import type { Game } from '../engine/game';
 import { findHost, Host, openPortCount } from '../engine/network';
 
@@ -51,6 +52,16 @@ export function ramHtml(g: Game): string {
 
 export function guideHtml(g: Game, tutorial: boolean): string {
   const h = g.nextHint();
+  const t = g.run.tutorial;
+  if (t) {
+    const pct = (t.step / TUTORIAL_STEPS.length) * 100;
+    return `
+    <div class="panel-title">TRAINING SIM <span class="dim">// step ${t.step + 1}/${TUTORIAL_STEPS.length}</span></div>
+    <div class="meter train-meter"><div class="fill" style="width:${pct}%"></div></div>
+    <div class="guide-text train-title">${esc(h.text)}</div>
+    ${h.cmd ? `<div class="train-type dim">type this in the terminal:</div><button class="chip" data-cmd="${esc(h.cmd)}">▸ ${esc(h.cmd)}</button>` : ''}
+    <div class="dim train-foot">Vex's instructions are in the terminal. The trace cannot burn you in here.${g.profile.tutorialDone ? ' Replay? tutorial skip leaves.' : ''}</div>`;
+  }
   const job = CONTRACTS.find((c) => g.run.contracts[c.id] === 'active');
   return `
     <div class="panel-title">NEXT STEP <span class="dim">// ${tutorial ? 'guide on' : 'guide off'}</span></div>
@@ -181,14 +192,23 @@ export function shopModalHtml(g: Game): string {
 }
 
 export function jobsModalHtml(g: Game): string {
-  const cards = CONTRACTS.map((c) => {
+  const t = g.run.tutorial;
+  const drill = t
+    ? `<div class="job-card ${t.paid ? 'done' : 'active'}"><div class="job-top"><span class="tag">DRILL · Tutorial</span><span class="pay">${g.profile.tutorialDone ? TUTORIAL_PAY_REPLAY : TUTORIAL_PAY_FIRST}¢</span></div>
+      <div class="job-title">Training Sim</div><div class="dim">Follow Vex through the sim, step by step.</div><div class="job-state">${t.paid ? 'PAID' : 'ACTIVE'}</div></div>`
+    : '';
+  const cards = drill + CONTRACTS.map((c) => {
+    if (t) {
+      return `<div class="job-card locked"><div class="job-top"><span class="tag">${c.id.toUpperCase()} · ${esc(c.type)}</span><span class="pay">${c.payout}¢</span></div>
+      <div class="job-title">${esc(c.title)}</div><div class="dim">Finish training to unlock.</div><div class="job-state">LOCKED</div></div>`;
+    }
     const st = g.run.contracts[c.id];
     return `<div class="job-card ${st}"><div class="job-top"><span class="tag">${c.id.toUpperCase()} · ${esc(c.type)}</span><span class="pay">${c.payout}¢</span></div>
       <div class="job-title">${esc(c.title)}</div>
       <div class="dim">${st === 'locked' ? 'Unlocks after the previous job.' : esc(c.objective(g.world))}</div>
       <div class="job-state">${st.toUpperCase()}</div></div>`;
   }).join('');
-  return `<div class="modal-head"><h3>CONTRACT BOARD <span class="dim">${esc(g.world.org)}</span></h3><button class="x" data-close>✕</button></div><div class="jobs-grid">${cards}</div>`;
+  return `<div class="modal-head"><h3>CONTRACT BOARD <span class="dim">${esc(g.world.org)}</span></h3><button class="x" data-close>✕</button></div><div class="jobs-grid ${t ? 'four' : ''}">${cards}</div>`;
 }
 
 export function mailModalHtml(g: Game, idx: number): string {

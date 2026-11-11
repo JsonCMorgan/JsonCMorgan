@@ -99,16 +99,8 @@ function authLog(rng: Rng, hostname: string, attackerIp: string, legitIp: string
   return lines.join('\n') + '\n';
 }
 
-export function generateWorld(seed: number): World {
-  const rng = new Rng(seed);
-  const org = rng.pick(ORGS);
-  const net = rng.int(20, 90);
-  const gatewayIp = `10.${net}.0.${rng.int(2, 9)}`;
-  const socIp = `10.${net}.0.${rng.int(10, 30)}`;
-  const financeIp = `10.${net}.0.${rng.int(31, 60)}`;
-  const attackerIp = `203.0.113.${rng.int(30, 199)}`;
-
-  const home: Host = {
+export function homeHost(gatewayIp: string): Host {
+  return {
     ip: HOME_IP,
     hostname: 'ghost-rig',
     role: 'home',
@@ -151,6 +143,18 @@ export function generateWorld(seed: number): World {
       }),
     }),
   };
+}
+
+export function generateWorld(seed: number): World {
+  const rng = new Rng(seed);
+  const org = rng.pick(ORGS);
+  const net = rng.int(20, 90);
+  const gatewayIp = `10.${net}.0.${rng.int(2, 9)}`;
+  const socIp = `10.${net}.0.${rng.int(10, 30)}`;
+  const financeIp = `10.${net}.0.${rng.int(31, 60)}`;
+  const attackerIp = `203.0.113.${rng.int(30, 199)}`;
+
+  const home = homeHost(gatewayIp);
 
   const gwUser = 'admin';
   const gwPass = rng.pick(DEFAULT_PASSWORDS);
@@ -313,4 +317,112 @@ export function scanLinks(world: World, from: Host): Host[] {
     }
   }
   return found;
+}
+
+export const TRAINING_GW_IP = '10.66.0.2';
+export const TRAINING_VAULT_IP = '10.66.0.7';
+export const TRAINING_INTRUDER_IP = '198.51.100.66';
+export const TRAINING_CACHE_IP = '10.66.0.9';
+
+/** Vex's training sim: a soft gateway and a firewalled vault that only trusts it. */
+export function generateTrainingWorld(): World {
+  const rng = new Rng(66);
+  const gw: Host = {
+    ip: TRAINING_GW_IP,
+    hostname: 'dojo-gw',
+    role: 'gateway',
+    ports: [
+      { num: 22, proto: 'tcp', service: 'ssh', version: 'OpenSSH 7.2p2 (sim)', open: false, crackedBy: 'sshbrute' },
+      { num: 80, proto: 'tcp', service: 'http', version: 'nginx 1.18.0 (sim)', open: false, crackedBy: 'webscan' },
+    ],
+    portsRequired: 1,
+    firewall: null,
+    security: 0.05,
+    alerted: false,
+    root: false,
+    discovered: true,
+    scanned: false,
+    fingerprinted: false,
+    cleaned: false,
+    links: [HOME_IP, TRAINING_VAULT_IP],
+    account: { user: 'admin', pass: 'admin', isDefault: true },
+    credsFound: false,
+    fs: dir({
+      etc: dir({ motd: file('VEX TRAINING SIM // gateway node. Nothing here is real.\n') }),
+      var: dir({ log: dir({ 'auth.log': file('') }) }),
+    }),
+  };
+  const vault: Host = {
+    ip: TRAINING_VAULT_IP,
+    hostname: 'dojo-vault',
+    role: 'finance',
+    ports: [
+      { num: 22, proto: 'tcp', service: 'ssh', version: 'OpenSSH 7.4 (sim)', open: false, crackedBy: 'sshbrute' },
+      { num: 80, proto: 'tcp', service: 'http', version: 'Apache httpd 2.4.49 (sim)', open: false, crackedBy: 'webscan' },
+    ],
+    portsRequired: 2,
+    firewall: {
+      allowSrc: TRAINING_GW_IP,
+      bypassed: false,
+      seen: false,
+      rules: [
+        '*filter',
+        ':INPUT DROP [0:0]',
+        '-A INPUT -i lo -j ACCEPT',
+        '-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT',
+        `-A INPUT -s ${TRAINING_GW_IP}/32 -p tcp -m multiport --dports 22,80 -j ACCEPT`,
+        '-A INPUT -j LOG --log-prefix "FW-DROP: "',
+        'COMMIT',
+      ],
+    },
+    security: 0.1,
+    alerted: false,
+    root: false,
+    discovered: false,
+    scanned: false,
+    fingerprinted: false,
+    cleaned: false,
+    links: [TRAINING_GW_IP, TRAINING_CACHE_IP],
+    account: { user: 'trainee', pass: 'sunshine1', isDefault: false },
+    credsFound: false,
+    fs: dir({
+      etc: dir({ motd: file('VEX TRAINING SIM // vault node. Grab the payload, read the logs.\n') }),
+      srv: dir({ training: dir({ 'payload.dat': file('VEX-SIM PAYLOAD\nflag{tr41n1ng_c0mpl3t3_gh0st}\n') }) }),
+      var: dir({ log: dir({ 'auth.log': file(authLog(rng, 'dojo-vault', TRAINING_INTRUDER_IP, TRAINING_GW_IP, 'trainee')) }) }),
+    }),
+  };
+  const cache: Host = {
+    ip: TRAINING_CACHE_IP,
+    hostname: 'dojo-cache',
+    role: 'soc',
+    ports: [{ num: 22, proto: 'tcp', service: 'ssh', version: 'OpenSSH 8.2p1 (sim)', open: false, crackedBy: 'sshbrute' }],
+    portsRequired: 1,
+    firewall: null,
+    security: 0.1,
+    alerted: false,
+    root: false,
+    discovered: false,
+    scanned: false,
+    fingerprinted: false,
+    cleaned: false,
+    links: [TRAINING_VAULT_IP],
+    account: { user: 'cache', pass: 'hunter2', isDefault: false },
+    credsFound: false,
+    fs: dir({
+      etc: dir({ motd: file('VEX TRAINING SIM // cache node. Final exam.\n') }),
+      srv: dir({ 'graduation.key': file('VEX-SIM GRADUATION KEY\nflag{gh0st_gr4du4t3d}\n') }),
+      var: dir({ log: dir({ 'auth.log': file('') }) }),
+    }),
+  };
+  return {
+    seed: 0,
+    org: 'Vex Training Sim',
+    orgSlug: 'dojo',
+    homeIp: HOME_IP,
+    hosts: [homeHost(TRAINING_GW_IP), gw, vault, cache],
+    attackerIp: TRAINING_INTRUDER_IP,
+    gatewayIp: TRAINING_GW_IP,
+    socIp: TRAINING_VAULT_IP,
+    financeIp: TRAINING_VAULT_IP,
+  };
 }

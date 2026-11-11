@@ -1565,3 +1565,40 @@ button {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ---------- training ---------- */
+.train-meter {
+  margin-bottom: 12px;
+}
+.train-meter .fill {
+  background: linear-gradient(90deg, var(--yellow), var(--magenta));
+}
+.train-title {
+  font-family: var(--display);
+  font-size: 14px;
+  color: #fff;
+  text-shadow: 0 0 10px var(--magenta);
+}
+.train-type {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
+}
+.train-foot {
+  margin-top: 12px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.jobs-grid.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+.title-btns .row {
+  display: flex;
+  gap: 12px;
+}
+.first-note {
+  margin-top: 26px;
+  color: var(--yellow);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}

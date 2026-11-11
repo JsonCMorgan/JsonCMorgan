@@ -12,7 +12,7 @@ function settle(g: Game, maxSec = 60) {
 }
 
 function setup() {
-  const g = new Game(null, SEED);
+  const g = new Game(null, SEED, { tutorial: false });
   const events: GameEvent[] = [];
   g.on((e) => events.push(e));
   const w = g.world;
