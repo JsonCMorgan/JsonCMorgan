@@ -191,4 +191,14 @@ describe('tutorial', () => {
     delete (data.profile as Partial<typeof data.profile>).tutorialDone;
     expect(new Game(data).profile.tutorialDone).toBe(true);
   });
+
+  it('old saves from players who never earned anything get sent to training, op parked', () => {
+    const g = new Game(null, 9, { tutorial: false });
+    const org = g.world.org;
+    const data = g.serialize();
+    delete (data.profile as Partial<typeof data.profile>).tutorialDone;
+    const loaded = new Game(data);
+    expect(loaded.inTutorial).toBe(true);
+    expect(loaded.stash?.world.org).toBe(org);
+  });
 });

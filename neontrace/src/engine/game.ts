@@ -120,10 +120,13 @@ export class Game {
       this.run = save.run;
       this.run.procs = [];
       this.stash = save.stash ?? null;
+      if (!this.profile.tutorialDone && !this.run.tutorial && opts.tutorial !== false) this.startTutorial();
     } else {
       this.profile = newProfile(seed);
-      if (opts.tutorial === false) this.startRun();
-      else this.startTutorial();
+      if (opts.tutorial === false) {
+        this.profile.tutorialDone = true;
+        this.startRun();
+      } else this.startTutorial();
     }
   }
 
