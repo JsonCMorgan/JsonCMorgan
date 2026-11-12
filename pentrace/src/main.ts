@@ -25,6 +25,7 @@ import {
 } from './ui/panels';
 import { morph } from './ui/morph';
 import { bindPressEnter } from './ui/prompt';
+import { advanceClock } from './engine/clock';
 import { GameTerminal } from './ui/terminal';
 import { TUTORIAL_STEPS } from './engine/tutorial';
 import { TRAINING_INTRUDER_IP, TRAINING_VAULT_IP } from './engine/network';
@@ -567,9 +568,8 @@ let last = performance.now();
 let acc = 0;
 let saveAcc = 0;
 function frame(now: number) {
-  const dt = Math.min(0.25, (now - last) / 1000);
+  const dt = advanceClock((now - last) / 1000, (step) => game.tick(step));
   last = now;
-  game.tick(dt);
   acc += dt;
   saveAcc += dt;
   renderCredits(dt);
