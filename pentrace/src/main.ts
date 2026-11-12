@@ -576,7 +576,7 @@ function showTitle() {
     term.focus();
     if (training && !game.inTutorial) game.startTutorial();
     if (defenseEntry && game.profile.tutorialDone) startDefensePreview(game);
-  else game.routeFromTitle();
+    else game.routeFromTitle();
     persist();
     renderAll();
     void boot().then(() => {
