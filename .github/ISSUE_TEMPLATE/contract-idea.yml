@@ -1,0 +1,60 @@
+name: Contract or content idea
+description: Pitch a new contract, host type, Index entry or story beat
+title: 'content: '
+labels: [type:content, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Contracts are plain data in `pentrace/src/engine/content/`. Keep everything simulated and original;
+        public curricula (OverTheWire, picoCTF, TryHackMe topics) are fine as inspiration.
+  - type: input
+    id: title
+    attributes:
+      label: Contract title
+      placeholder: Cold Storage
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Contract type
+      options:
+        - Recon
+        - Breach & Retrieve
+        - Log Analysis / forensics
+        - Blue team (catch the attacker)
+        - Crypto / puzzle
+        - Scripting challenge
+        - Story / faction
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: brief
+    attributes:
+      label: Fixer's brief
+      description: The mail the player gets, in character.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Intended solution path
+      description: The commands or steps a player would use, and how the game checks success.
+    validations:
+      required: true
+  - type: textarea
+    id: lesson
+    attributes:
+      label: What it teaches
+      description: Real concept, Index entry it unlocks or needs, MITRE ATT&CK ID if relevant.
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Difficulty
+      options:
+        - Tutorial / first op
+        - Early
+        - Mid
+        - Late / Heat

@@ -1,0 +1,14 @@
+dist/
+coverage/
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/icons/
+package-lock.json
+
+# Pre-Prettier source. Remove these lines in one dedicated `npm run format` commit
+# (listed in .git-blame-ignore-revs) once the in-flight tutorial work has merged.
+src/
+tests/
+index.html
+README.md

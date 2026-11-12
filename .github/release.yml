@@ -1,0 +1,16 @@
+# Categories for GitHub's auto-generated release notes (manual pentrace-v* tags).
+changelog:
+  exclude:
+    labels: [skip-changelog, dependencies]
+    authors: [dependabot, github-actions]
+  categories:
+    - title: New features
+      labels: [type:feature, enhancement]
+    - title: New contracts and content
+      labels: [type:content]
+    - title: Bug fixes
+      labels: [type:bug, bug]
+    - title: Security
+      labels: [security]
+    - title: Other changes
+      labels: ['*']

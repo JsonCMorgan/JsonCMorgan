@@ -1,0 +1,237 @@
+{
+  "source": "Hacknet roguelite plan, section 16 (milestone roadmap), sections 7 to 12A",
+  "milestones": [
+    {
+      "title": "M2: Roguelite shell",
+      "description": "Procedural seeded network generation, a contract board, the hub/shop between runs, persistent credits and unlocks, the full breach layer stack (proxy overload, firewall rule-reading, privesc), and the trace to SOC reaction thresholds. Independently playable.",
+      "issues": [
+        {
+          "title": "feat: network generator v2 with subnets and node types",
+          "labels": ["type:feature", "area:engine", "priority:high"],
+          "body": "Grow the seeded generator from one small company into layered subnets (edge/DMZ, internal, crown jewels) with harder defenses and bigger payouts the deeper you go.\n\n**Scope**\n- Node types: contract targets, loot caches (tools, wordlists, creds), safe relays (pivot points that lower heat), honeypots (raise heat fast).\n- Network size, defense layers and heat sensitivity scale with difficulty.\n- Same seed gives the same network so runs can be replayed and shared.\n\n**Done when**\n- [ ] Generator produces at least 3 subnet depths with all 4 node types\n- [ ] Honeypots are recognizable to a careful player (Index entry explains the tells)\n- [ ] Unit tests cover determinism per seed and reachability of every contract target\n\nPlan: sections 8 and 16 (M2)."
+        },
+        {
+          "title": "feat: contract board with 3 to 6 jobs per op",
+          "labels": ["type:feature", "area:engine", "area:ui"],
+          "body": "Replace the fixed three contracts with a board generated per op from contract templates.\n\n**Scope**\n- Templates for Recon, Breach-and-retrieve, Breach-and-destroy, Log analysis and Web (section 9), filled from the generated network.\n- Each job shows payout, faction, difficulty and the skill it teaches.\n- Completing a job can reveal deeper nodes.\n- Verification by real output: flag string, file hash, deleted/created file, or a submitted answer.\n\n**Done when**\n- [ ] Board shows 3 to 6 jobs drawn from at least 5 templates\n- [ ] Every template has a test proving it is solvable on generated networks\n\nPlan: sections 8 and 9."
+        },
+        {
+          "title": "feat: hub between runs (rig, shop, board and Heat select)",
+          "labels": ["type:feature", "area:ui", "priority:high"],
+          "body": "Add the between-runs hub: the player's apartment/rig.\n\n**Scope**\n- Shop, story chat, pick a contract board (faction) and a difficulty (Heat).\n- Run summary on return: payout, heat, Index entries unlocked.\n- Extract options: full board, early extract (partial), traced (reduced payout, keep banked loot and permanent unlocks).\n\n**Done when**\n- [ ] A full run loop works: hub, op, extract or traced, back to hub\n- [ ] Hub works with keyboard only\n\nPlan: section 8."
+        },
+        {
+          "title": "feat: persistent meta-progression and versioned saves",
+          "labels": ["type:feature", "area:engine"],
+          "body": "Persist what carries across runs and make saves safe to evolve.\n\n**Persists:** credits, per-faction rep and unlocked tiers, owned tools and mods, RAM and rig upgrades, wordlists and the banked cred DB, `~/bin` scripts (later), unlocked man pages and skill certs, story progress.\n**Resets per run:** network, board, in-run heat, temporary creds (unless banked).\n\n**Done when**\n- [ ] Save format has a version number and a migration path from the M1 save\n- [ ] Tests cover save, load and migration\n- [ ] Desktop build stores saves in the app data dir (not only localStorage)\n\nPlan: section 8."
+        },
+        {
+          "title": "feat: proxy layer and floodctl overload",
+          "labels": ["type:feature", "area:engine", "learning"],
+          "body": "Add the proxy defense layer, beaten by overloading it with `floodctl` run from owned relays.\n\n**Scope**\n- More owned relays overload faster; flooding is loud and raises the trace.\n- Proxy-pierce tool mod lets specific tools work through an active proxy.\n- Index entry: load/DoS concept, pivoting, detection and defense.\n\n**Done when**\n- [ ] Proxied hosts block crackers until the proxy is overloaded\n- [ ] Tests cover overload math and heat cost\n\nPlan: sections 7.2 and 11."
+        },
+        {
+          "title": "feat: privilege escalation layer (sudo -l, SUID, cron)",
+          "labels": ["type:feature", "area:engine", "learning"],
+          "body": "Split foothold from root: a user shell is easy, root needs reading the box and finding one real misconfiguration.\n\n**Scope**\n- Commands: `sudo -l`, `find / -perm -4000`, cron and kernel checks on owned boxes.\n- Generated misconfigs: sudo NOPASSWD on a GTFOBins-style binary, writable cron script, SUID binary.\n- Index entries for each misconfig with detection and hardening.\n\n**Done when**\n- [ ] Hosts can grant user-level access without root\n- [ ] At least 3 privesc paths, each with tests\n\nPlan: section 7.2."
+        },
+        {
+          "title": "feat: SOC reaction thresholds on the trace meter",
+          "labels": ["type:feature", "area:engine", "blue-team", "learning"],
+          "body": "Make the SOC react as heat climbs.\n\n**Scope**\n- 50%: an analyst starts correlating logs (visible as mail/chatter, faster heat from repeat noise).\n- 75%: your source IP is blocked; you must pivot through a new relay.\n- 100%: traced, run ends.\n- Optional `tracekill` panic button: rare and expensive.\n\n**Done when**\n- [ ] Each threshold has a clear on-screen event and an Index link\n- [ ] Tests cover the block-and-pivot path\n\nPlan: section 7.3."
+        },
+        {
+          "title": "feat: new port crackers (SMTP, SQL, SSL chaining)",
+          "labels": ["type:feature", "area:engine", "learning"],
+          "body": "Add the remaining breach tools from the tool map.\n\n**Scope**\n- `smtpprobe` (25): open relay, VRFY user enumeration; enumerated users feed the SSH wordlist.\n- `sqlprobe` / `sqli` (1433): default DB creds, SQL injection, dumped creds reused across the network.\n- `sslchain` (443): needs another port open first (SSLTrojan-style).\n- Each tool implements `ToolDef`, has a `man` page and an Index entry.\n\n**Done when**\n- [ ] Tools are buyable in the shop and appear in generated networks\n- [ ] Tests per tool\n\nPlan: sections 7.2 and 11."
+        },
+        {
+          "title": "feat: tool mods v2 (Turbo, Lean, Proxy-pierce, Auto-chain)",
+          "labels": ["type:feature", "area:engine"],
+          "body": "Per-tool mods that change behavior, not just numbers.\n\n- Turbo: faster but louder.\n- Lean: lower RAM cost.\n- Proxy-pierce: works through an active proxy.\n- Auto-chain: auto-routes through an open port.\n\n**Done when**\n- [ ] Mods are shop items, stack rules are defined and tested\n\nPlan: section 11."
+        }
+      ]
+    },
+    {
+      "title": "M3: Bash scripting + Workshop v1",
+      "description": "A ~/bin that persists, a nano-style in-game editor, saving and running .sh scripts that cost RAM, and the first scripting contracts. Workshop v1: Bash tools registered through the common ToolDef interface, the Range test network, and the first two homemade tools (port scanner and log watcher).",
+      "issues": [
+        {
+          "title": "feat: persistent ~/bin and PATH lookup for player scripts",
+          "labels": ["type:feature", "area:engine", "scripting"],
+          "body": "Player scripts saved to `~/bin` persist across runs and are callable by name (`crack_all`) in any op.\n\n**Done when**\n- [ ] `~/bin` survives runs and save/load\n- [ ] Command dispatch checks built-ins, then `~/bin`\n- [ ] Running a script shows it in `ps` with a RAM cost\n\nPlan: sections 12 and 16 (M3)."
+        },
+        {
+          "title": "feat: in-game nano-style editor",
+          "labels": ["type:feature", "area:ui", "scripting"],
+          "body": "A full-screen terminal editor for scripts and Workshop tools.\n\n**Scope**\n- Open, edit, save (`^O`), exit (`^X`), search, line numbers, Bash and Python syntax highlight.\n- Works inside xterm.js; no external editor needed.\n- Optional later: external file hook for the desktop build.\n\n**Done when**\n- [ ] `nano ~/bin/crack_all.sh` edits and saves a file in the VFS\n- [ ] Keyboard shortcuts listed in a footer like real nano\n\nPlan: section 16 (M3)."
+        },
+        {
+          "title": "feat: Bash interpreter subset for .sh scripts",
+          "labels": ["type:feature", "area:engine", "scripting", "learning"],
+          "body": "Run player `.sh` files against the simulated command set.\n\n**Scope**\n- Variables, `if`, `for`/`while`, functions, exit codes, `$()`, `$@` args, `&&` / `||`, redirection.\n- Scripts cost RAM while running and can be killed with `kill`.\n- Hard limits on loop iterations and runtime so a bad loop cannot freeze the game.\n\n**Done when**\n- [ ] The `crack_all.sh` example from the plan runs end to end\n- [ ] Unit tests for each language feature and the runaway-loop guard\n\nPlan: section 12."
+        },
+        {
+          "title": "content: first scripting contracts (ten identical boxes)",
+          "labels": ["type:content", "scripting", "learning"],
+          "body": "Contracts that make scripting feel necessary, each introducing exactly one concept: a loop, then conditionals, then functions, then parsing output, then error handling.\n\n**Done when**\n- [ ] At least 3 scripting contracts with a timer that is miserable by hand and easy with a loop\n- [ ] Verification checks the outcome (all boxes owned), not code style\n- [ ] Index entries for Bash loops and exit codes\n\nPlan: sections 9, 10 (tier 3) and 12."
+        },
+        {
+          "title": "feat(workshop): Workshop v1 framework for Bash tools",
+          "labels": ["type:feature", "area:engine", "workshop", "scripting", "priority:high"],
+          "body": "Let the player write tools, not just scripts, and use them like shop tools.\n\n**Scope**\n- `workshop new <name> --lang bash` scaffolds from a template with one TODO.\n- `workshop test <name>` runs it in the Range.\n- `workshop register <name>` registers it through the existing `ToolDef` registry with `origin: workshop`, so it uses the same RAM bar, progress bar and `ps`.\n- Shop UI lists them under \"Your tools\"; tool mods can apply.\n\n**Done when**\n- [ ] A registered Bash tool is usable in a run exactly like a bought tool\n- [ ] Tests cover register, persist and run\n\nPlan: section 12A."
+        },
+        {
+          "title": "feat(workshop): the Range test network",
+          "labels": ["type:feature", "area:engine", "workshop"],
+          "body": "A safe practice network with known answers: no heat, no payout.\n\n**Scope**\n- Fixed hosts with known open/filtered ports, banners and logs.\n- Pass/fail checklist per tool type, e.g. \"found all 4 open ports\", \"did not crash on a filtered port\".\n\n**Done when**\n- [ ] Checklists exist for scanner and log watcher tools\n- [ ] Range never affects run state or the trace\n\nPlan: section 12A."
+        },
+        {
+          "title": "feat(workshop): homemade port scanner (myscan)",
+          "labels": ["type:feature", "workshop", "learning"],
+          "body": "First offensive Workshop tool.\n\n**Scope**\n- Template and sim API calls for TCP connect checks with timeouts and banners.\n- Unlocks after owning the shop scanner and finishing the first recon contract.\n- Index: TCP connect vs SYN scanning, timeouts, service banners; \"Built by you\" badge.\n\n**Done when**\n- [ ] A correct `myscan` passes the Range checklist and works in runs\n\nPlan: section 12A."
+        },
+        {
+          "title": "feat(workshop): homemade log watcher (watchlog)",
+          "labels": ["type:feature", "workshop", "blue-team", "learning"],
+          "body": "First defensive Workshop tool.\n\n**Scope**\n- Tail `auth.log`, count failures per IP, alert over a threshold.\n- Unlocks after the first log-analysis contract.\n- Index: log monitoring, thresholds, false positives.\n\n**Done when**\n- [ ] A correct `watchlog` passes the Range checklist\n- [ ] Usable in blue-team contracts\n\nPlan: section 12A."
+        }
+      ]
+    },
+    {
+      "title": "M4: Python scripting + curriculum tiers",
+      "description": "Pyodide sandbox, the Python breach API, curriculum tiers 4 to 7, skill certs in the hub. Workshop v2: Python tools (SSH cracker, web dir buster), IDS rules and the auto-responder, stats derived from the player's code, Built by you Index badges, and the your rig gets attacked defense event.",
+      "issues": [
+        {
+          "title": "feat: Pyodide sandbox for player Python",
+          "labels": ["type:feature", "area:engine", "scripting", "security", "priority:high"],
+          "body": "Run player Python safely inside the game.\n\n**Scope**\n- Pyodide in a Web Worker, lazy-loaded so startup stays fast.\n- Interrupt and timeouts (KeyboardInterrupt via SharedArrayBuffer; configure COOP/COEP for dev server and Tauri).\n- No real network or filesystem: only the injected sim API is visible.\n- Memory and runtime caps that map to in-game RAM.\n\n**Done when**\n- [ ] An infinite loop can be killed from `kill` without reloading\n- [ ] Tests or a checklist prove `import socket`, `js`, `pyodide.http` and file access cannot reach the host\n- [ ] Works in browser and desktop builds\n\nPlan: sections 12, 14 and 15."
+        },
+        {
+          "title": "feat: Python breach API",
+          "labels": ["type:feature", "area:engine", "scripting"],
+          "body": "The `breach` module player code imports.\n\n**Scope**\n- `breach.subnet()`, `scan()`, `crack()`, `loot()`, `tcp_connect()`, `banner()`, `report()`.\n- Later expansions: concurrency, event hooks (react to a trace), netmap graph object, logging/report API for blue-team automation.\n- In-game docs styled like real Python docs.\n\n**Done when**\n- [ ] The `auto_breach.py` and `myscan.py` examples from the plan run\n- [ ] API reference available via `man breach`\n\nPlan: sections 11 and 12."
+        },
+        {
+          "title": "feat(workshop): Workshop v2 Python tools (mybrute, mybust)",
+          "labels": ["type:feature", "workshop", "scripting", "learning"],
+          "body": "Python Workshop tools.\n\n- `mybrute` SSH cracker: dictionary loops, rate limiting, lockout handling. Unlocks after the first `sshbrute` success.\n- `mybust` web dir buster: HTTP status codes, wordlists, response-size heuristics. Unlocks after the first `webscan`.\n- `workshop new <name> --lang python` templates and Range checklists for both.\n\n**Done when**\n- [ ] Both tools register and run in ops like shop tools\n\nPlan: section 12A."
+        },
+        {
+          "title": "feat(workshop): IDS rules and auto-responder (ban_ip)",
+          "labels": ["type:feature", "workshop", "blue-team", "learning"],
+          "body": "Defensive Workshop tools.\n\n- IDS rules (`rules/*.rule`): signature vs threshold detection, false positives, Snort/Sigma-style. Unlocks the first time heat crosses 50%.\n- `ban_ip` auto-responder: fail2ban-style blocking and why automated response can lock out real users. Unlocks after owning `watchlog`.\n\n**Done when**\n- [ ] Rules and responder run in blue-team contracts and the rig-attack event\n\nPlan: section 12A."
+        },
+        {
+          "title": "feat(workshop): derive tool stats from the player's code",
+          "labels": ["type:feature", "area:engine", "workshop"],
+          "body": "Good code makes a better tool.\n\n- RAM cost from script size plus peak memory.\n- Runtime from simulated packet count.\n- Heat from how noisy it is (a 65k-port sweep is loud; a targeted list is quiet).\n- Script efficiency perks from the shop apply.\n\n**Done when**\n- [ ] Stats are shown on register and in `tools`\n- [ ] Tests show a targeted scanner beats a full sweep on heat\n\nPlan: sections 11 and 12A."
+        },
+        {
+          "title": "feat: Built by you Index badges and Mastered state",
+          "labels": ["type:feature", "area:ui", "workshop", "learning"],
+          "body": "Registering a homemade tool adds a \"Built by you\" badge to the concept's Index entry and unlocks its deeper sub-section (the Mastered state).\n\n**Done when**\n- [ ] Badge and Mastered sub-section render for each Workshop tool concept\n\nPlan: sections 12A and 13."
+        },
+        {
+          "title": "feat: your rig gets attacked defense event",
+          "labels": ["type:feature", "area:engine", "blue-team", "workshop"],
+          "body": "A rival brute-forces your relay. A `watchlog` plus IDS rule that catches them before their trace completes wins the event; the defensive mirror of the breach.\n\n**Done when**\n- [ ] Event triggers after the player owns at least one defensive tool\n- [ ] Clear win/lose outcomes with Index links\n\nPlan: section 12A."
+        },
+        {
+          "title": "content: curriculum tiers 4 to 7 and skill certs in the hub",
+          "labels": ["type:content", "learning"],
+          "body": "Contracts and Index entries for tiers 4 (networking), 5 (credential and service attacks), 6 (web vulns) and 7 (scripting up in Python), plus skill certs shown in the hub.\n\n**Done when**\n- [ ] Each tier has contracts, Index entries and a cert earned when its entries are unlocked and read\n\nPlan: section 10."
+        }
+      ]
+    },
+    {
+      "title": "M5: Blue team + content depth",
+      "description": "Forensics and log-analysis tooling, SOC catch the attacker contracts, crypto contracts, more factions and story chat, Heat/Ascension difficulty.",
+      "issues": [
+        {
+          "title": "feat: forensics tooling (strings, carving, pcapview, memforensics)",
+          "labels": ["type:feature", "area:engine", "blue-team", "learning"],
+          "body": "Tools for forensics contracts: `strings`, file carving and metadata, `pcapview`, `memforensics`, timeline building, and `awk`/`cut`/`sort | uniq -c` coverage for log work.\n\n**Done when**\n- [ ] Each tool has a man page, an Index entry and tests\n\nPlan: sections 9 and 10 (tier 9)."
+        },
+        {
+          "title": "content: SOC catch the attacker contracts",
+          "labels": ["type:content", "blue-team", "learning"],
+          "body": "Blue-team contracts where the player investigates an intrusion (sometimes their own earlier run): find the attacker IP and compromised account, build a timeline, map IOCs to MITRE ATT&CK.\n\n**Done when**\n- [ ] At least 4 SOC contracts using logs, pcap and memory artifacts\n\nPlan: sections 9 and 10."
+        },
+        {
+          "title": "content: crypto contracts",
+          "labels": ["type:content", "learning"],
+          "body": "Encoding vs encryption, Caesar/XOR/base64, hashing and hashcat-style cracking. Verification by submitted plaintext.\n\n**Done when**\n- [ ] At least 4 crypto contracts with Index entries\n\nPlan: sections 9 and 10 (tier 8)."
+        },
+        {
+          "title": "content: more factions and story chat",
+          "labels": ["type:content"],
+          "body": "New factions with their own contract boards, rep tiers and story chat in the hub, in the stylized cyberpunk tone.\n\n**Done when**\n- [ ] At least 2 new factions with rep-gated boards and story arcs\n\nPlan: sections 8 and 17.1."
+        },
+        {
+          "title": "feat: Heat / Ascension difficulty levels",
+          "labels": ["type:feature", "area:engine"],
+          "body": "Stackable difficulty for replay: higher Heat means bigger networks, more defense layers, tighter RAM, more sensitive SOC, less hand-holding, and better payouts.\n\n**Done when**\n- [ ] Heat levels selectable in the hub with clear modifiers\n- [ ] Tests for modifier application\n\nPlan: sections 8 and 9."
+        }
+      ]
+    },
+    {
+      "title": "M6: Polish + companion",
+      "description": "Audio/synthwave, themes, juice; data-driven contract authoring and validator (modding); then scope the phone companion (OSINT minigames, notifications, script editor) on the shared TS core.",
+      "issues": [
+        {
+          "title": "feat: synthwave soundtrack, SFX pass and mixer",
+          "labels": ["type:feature", "area:ui"],
+          "body": "Music and sound that match the neon tone: breach, crack, trace-alarm and UI SFX, a music track set, and a mixer with mute and per-channel volume.\n\n**Done when**\n- [ ] Settings persist; audio never autoplays before user interaction\n\nPlan: section 16 (M6)."
+        },
+        {
+          "title": "feat: terminal themes and cosmetics shop",
+          "labels": ["type:feature", "area:ui"],
+          "body": "Terminal themes, prompt styles and synthwave tracks as a cosmetic credit sink (Hacknet ThemeChanger style).\n\n**Done when**\n- [ ] At least 4 themes, all meeting contrast for readability\n\nPlan: section 11."
+        },
+        {
+          "title": "feat: game feel pass (breach animations, glitch, screen effects)",
+          "labels": ["type:feature", "area:ui"],
+          "body": "Juice: satisfying breach animations, glitch and CRT effects, trace-alarm escalation, root celebration. Respect a reduced-motion setting.\n\n**Done when**\n- [ ] Effects can be toggled and honor prefers-reduced-motion\n\nPlan: sections 16 (M6) and 17.1."
+        },
+        {
+          "title": "feat: data-driven contract authoring and validator (modding)",
+          "labels": ["type:feature", "area:engine"],
+          "body": "Move contracts to a data format (JSON/YAML) with a schema and a validator CLI, so new contracts (and mods) can be authored without touching engine code.\n\n**Done when**\n- [ ] Existing contracts migrated to the data format\n- [ ] `npm run validate:content` runs in CI and fails on bad content\n- [ ] Authoring guide in CONTRIBUTING\n\nPlan: section 16 (M6)."
+        },
+        {
+          "title": "build: sign installers and enable the Tauri auto-updater",
+          "labels": ["type:chore", "area:desktop", "security"],
+          "body": "Make releases trustworthy to install.\n\n**Scope**\n- Windows code signing and macOS signing plus notarization in the release workflow (secrets in GitHub environments).\n- Tauri updater with a signing key and `latest.json` uploaded by tauri-action.\n- Build provenance attestations for release assets.\n\n**Done when**\n- [ ] Installers open without SmartScreen/Gatekeeper warnings\n- [ ] An installed build updates itself to the next release"
+        },
+        {
+          "title": "docs: scope the phone companion app",
+          "labels": ["type:chore", "area:docs"],
+          "body": "Write a scoping doc for the companion on the shared TypeScript core: OSINT minigames, notifications, script editor, and how progress syncs with the PC save. PC stays first; this is a scope, not a build.\n\n**Done when**\n- [ ] Doc covers features, tech options (Tauri mobile vs PWA), sync model and a recommended first slice\n\nPlan: sections 16 (M6) and 17.1."
+        }
+      ]
+    }
+  ],
+  "unscheduled": [
+    {
+      "title": "chore: format src and tests with Prettier in one commit",
+      "labels": ["type:chore", "area:build"],
+      "body": "Prettier currently skips `pentrace/src/`, `tests/`, `index.html` and `README.md` because that code predates the formatter (see `pentrace/.prettierignore`).\n\nOnce in-flight game PRs have merged:\n1. Remove those lines from `.prettierignore`.\n2. Run `npm run format` as a single `style:` commit with no other changes.\n3. Add that commit SHA to a root `.git-blame-ignore-revs` so `git blame` skips it.\n\n**Done when**\n- [ ] `npm run format:check` covers all source"
+    },
+    {
+      "title": "chore: re-enable consistent-type-imports lint rule",
+      "labels": ["type:chore", "area:build"],
+      "body": "`@typescript-eslint/consistent-type-imports` was left off when ESLint was introduced because enabling it needs source edits (9 imports that are type-only). Turn it on and run `npm run lint:fix` in a quiet moment between feature PRs."
+    },
+    {
+      "title": "chore: drop the TypeScript 6 lint shim once typescript-eslint supports TS 7",
+      "labels": ["type:chore", "area:build"],
+      "body": "The game compiles with TypeScript 7 (installed as `@typescript/native`), while `typescript` is held at 6.0.x only because typescript-eslint needs the JS compiler API. When a stable typescript-eslint release supports TS 7, move `typescript` back to 7.x, remove the alias, point `npm run typecheck` back at `tsc`, and remove the Dependabot ignore rule."
+    },
+    {
+      "title": "test: raise engine coverage and ratchet the floor",
+      "labels": ["type:chore", "area:tests"],
+      "body": "Coverage is about 56% of lines with a floor of 35% in `pentrace/vite.config.ts`. Add tests for `game.ts` command paths and content definitions, then raise the thresholds to just below the new numbers so coverage can only go up."
+    }
+  ]
+}

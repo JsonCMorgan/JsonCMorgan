@@ -11,5 +11,13 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      reporter: ['text-summary', 'lcov', 'json-summary'],
+      reportsDirectory: 'coverage',
+      // Floor, not a goal: ratchet these up as engine tests grow.
+      thresholds: { statements: 35, branches: 25, functions: 35, lines: 35 },
+    },
   },
 });

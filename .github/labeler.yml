@@ -1,0 +1,29 @@
+# Path-based PR labels, applied by .github/workflows/labeler.yml.
+'area:engine':
+  - changed-files:
+      - any-glob-to-any-file: 'pentrace/src/engine/**'
+'area:ui':
+  - changed-files:
+      - any-glob-to-any-file: ['pentrace/src/ui/**', 'pentrace/src/*.css', 'pentrace/index.html']
+'area:desktop':
+  - changed-files:
+      - any-glob-to-any-file: 'pentrace/src-tauri/**'
+'area:ci':
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
+'area:build':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'pentrace/package.json'
+          - 'pentrace/package-lock.json'
+          - 'pentrace/*.config.*'
+          - 'pentrace/tsconfig.json'
+'area:docs':
+  - changed-files:
+      - any-glob-to-any-file: ['**/*.md', 'pentrace/docs/**']
+'area:tests':
+  - changed-files:
+      - any-glob-to-any-file: 'pentrace/tests/**'
+'type:content':
+  - changed-files:
+      - any-glob-to-any-file: 'pentrace/src/engine/content/**'
