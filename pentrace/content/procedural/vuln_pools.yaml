@@ -1,0 +1,24 @@
+# Stub pools for procedural assembly (M8). Index IDs must match index-entries.ts.
+pools:
+  - id: pool_recon_band_0_2
+    difficultyBand: [0, 2]
+    entries:
+      - vulnId: vuln_open_ports
+        indexEntryId: port-scanning
+        weight: 50
+        sscpDomains: [3, 6]
+      - vulnId: vuln_fw_rules
+        indexEntryId: firewall-rules
+        weight: 30
+        sscpDomains: [6, 7]
+  - id: pool_ssh_band_2_5
+    difficultyBand: [2, 5]
+    entries:
+      - vulnId: vuln_ssh_dictionary
+        indexEntryId: ssh-credential-attacks
+        weight: 40
+        sscpDomains: [2, 6, 7]
+      - vulnId: vuln_weak_ssh
+        indexEntryId: weak-default-creds
+        weight: 35
+        sscpDomains: [2, 7]

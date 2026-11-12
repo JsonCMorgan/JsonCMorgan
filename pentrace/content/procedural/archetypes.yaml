@@ -1,0 +1,19 @@
+archetypes:
+  - id: recon
+    title: Edge Survey
+    contractType: Recon
+    killChainTemplate: K1_recon_only
+    defaultBands: [0, 2]
+    grammarIds: [relay_scope_v1]
+  - id: breach_retrieve
+    title: Breach and Retrieve
+    contractType: Breach & Retrieve
+    killChainTemplate: K2_breach_exfil
+    defaultBands: [2, 5]
+    grammarIds: [relay_scope_v1, cipher_cold_v1]
+  - id: log_analysis
+    title: Log Analysis
+    contractType: Log Analysis
+    killChainTemplate: K3_log_hunt
+    defaultBands: [1, 4]
+    grammarIds: [relay_scope_v1]

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PenTraceMissionDraft",
+  "type": "object",
+  "required": [
+    "archetypeId",
+    "fixerId",
+    "grammarId",
+    "clientFiction",
+    "objectiveSummary",
+    "mail"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "archetypeId": { "type": "string", "enum": ["recon", "breach_retrieve", "log_analysis"] },
+    "fixerId": { "type": "string" },
+    "grammarId": { "type": "string" },
+    "killChainTemplate": { "type": "string" },
+    "clientFiction": { "type": "string" },
+    "objectiveSummary": { "type": "string", "maxLength": 500 },
+    "trainingTags": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sscpDomains": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 7 },
+          "minItems": 1,
+          "maxItems": 3
+        }
+      }
+    },
+    "mail": {
+      "type": "object",
+      "required": ["subject", "body"],
+      "additionalProperties": false,
+      "properties": {
+        "subject": { "type": "string", "maxLength": 120 },
+        "body": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 400 },
+          "minItems": 2,
+          "maxItems": 8
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "seed": { "type": "string" },
+        "generatedBy": { "type": "string", "enum": ["ollama", "fallback-grammar"] },
+        "model": { "type": "string" }
+      }
+    }
+  }
+}

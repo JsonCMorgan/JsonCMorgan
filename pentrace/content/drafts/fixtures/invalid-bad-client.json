@@ -1,0 +1,12 @@
+{
+  "archetypeId": "recon",
+  "fixerId": "relay",
+  "grammarId": "relay_scope_v1",
+  "killChainTemplate": "K1_recon_only",
+  "clientFiction": "RealCannabisCo",
+  "objectiveSummary": "Test.",
+  "mail": {
+    "subject": "JOB",
+    "body": ["line one", "line two"]
+  }
+}
