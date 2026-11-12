@@ -279,9 +279,17 @@ $('#btn-jobs').addEventListener('click', () => openModal('jobs'));
 $('#btn-shop').addEventListener('click', () => openModal('shop'));
 $('#btn-index').addEventListener('click', () => openModal('index'));
 $('#btn-train').addEventListener('click', () => {
-  if (game.run.tutorial) return term.focus();
+  if (modal) closeModal();
+  if (!$('#traced').hidden) {
+    disposeTracedPrompt?.();
+    disposeTracedPrompt = null;
+    $('#traced').hidden = true;
+    term.locked = false;
+  }
   term.print([c.dim('$ tutorial')]);
   runCommand('tutorial');
+  banner('TRAINING SIM', 'training');
+  term.focus();
 });
 $('#sound-btn').addEventListener('click', () => {
   game.profile.sound = !game.profile.sound;
@@ -327,6 +335,7 @@ document.addEventListener('mouseup', refocus);
 window.addEventListener('focus', refocus);
 
 // ------------------------------------------------------------------ traced
+let disposeTracedPrompt: (() => void) | null = null;
 function showTraced() {
   term.locked = true;
   const s = $('#traced');
@@ -343,7 +352,8 @@ function showTraced() {
   s.hidden = false;
   term.blur();
   $('#new-identity').focus();
-  bindPressEnter(window, () => {
+  disposeTracedPrompt = bindPressEnter(window, () => {
+    disposeTracedPrompt = null;
     s.hidden = true;
     game.startRun();
     term.locked = false;
@@ -374,6 +384,7 @@ async function boot(short = false) {
     await sleep(short ? 120 : 260);
   }
   if (game.inTutorial) {
+    banner('TRAINING SIM', 'training');
     term.writeRaw('\r\n' + c.yellow('>> VEX TRAINING SIM loaded.') + c.dim(' Follow Vex one step at a time. The NEXT STEP panel shows what to type.') + '\r\n');
     term.writeRaw(game.tutorialStepLines().join('\r\n') + '\r\n\r\n');
     term.locked = false;
@@ -401,10 +412,10 @@ function showTitle() {
     <div class="tagline">BREACH. GET PAID. <span>DON'T GET TRACED.</span></div>
     <div class="title-btns">
       <button class="big-btn" id="jack-in">${
-        game.inTutorial
-          ? game.profile.tutorialDone || (game.run.tutorial?.step ?? 0) > 0
+        game.inTutorial || !game.profile.tutorialDone
+          ? (game.run.tutorial?.step ?? 0) > 0
             ? `RESUME TRAINING // STEP ${(game.run.tutorial?.step ?? 0) + 1}`
-            : 'JACK IN ▸'
+            : 'START TRAINING ▸'
           : cont
             ? `CONTINUE // OP #${game.profile.runs} · ${game.profile.credits}¢`
             : 'JACK IN ▸'
@@ -414,7 +425,7 @@ function showTitle() {
         ${cont ? '<button class="ghost-btn" id="wipe">NEW GAME (wipe save)</button>' : ''}
       </div>
     </div>
-    ${game.inTutorial && !game.profile.tutorialDone ? '<div class="first-note">First time? Vex runs you through a training sim before the real contracts unlock.</div>' : ''}
+    ${!game.profile.tutorialDone ? '<div class="first-note">First time? Vex runs you through a training sim before the real contracts unlock.</div>' : ''}
     <div class="press">press ENTER</div>
     <div class="disclaimer">Every network, host and target in this game is simulated. Real techniques, fictional victims.</div>
   </div>`;
@@ -432,17 +443,17 @@ function showTitle() {
       refocus();
     }, 600);
     term.focus();
-    if (training && !game.inTutorial) {
-      game.startTutorial();
-      persist();
-    }
+    if (training && !game.inTutorial) game.startTutorial();
+    game.routeFromTitle();
+    persist();
+    renderAll();
     void boot().then(() => {
       if (demoMode) void runDemo();
       if (tutorialDemo) void runTutorialDemo();
     });
   };
   const disposeEnter = bindPressEnter(window, () => go(), {
-    clickTargets: [$('#jack-in'), t.querySelector('.press')],
+    clickTargets: [$('#jack-in')],
     ignore: () => ['train', 'wipe'].includes(document.activeElement?.id ?? ''),
   });
   $('#train')?.addEventListener('click', () => go(true));

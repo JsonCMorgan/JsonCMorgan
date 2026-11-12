@@ -69,6 +69,21 @@ describe('press ENTER prompts', () => {
     expect(fired).toBe(1);
   });
 
+  it('a stray click on the overlay, or on the press ENTER hint, never fires the action', () => {
+    const win = new EventTarget();
+    const btn = new EventTarget();
+    const overlay = new EventTarget();
+    const hint = new EventTarget();
+    let fired = 0;
+    bindPressEnter(win, () => fired++, { clickTargets: [btn] });
+    overlay.dispatchEvent(new Event('click'));
+    hint.dispatchEvent(new Event('click'));
+    win.dispatchEvent(new Event('click'));
+    expect(fired).toBe(0);
+    btn.dispatchEvent(new Event('click', { cancelable: true }));
+    expect(fired).toBe(1);
+  });
+
   it('dispose removes the listeners', () => {
     const win = new EventTarget();
     let fired = 0;

@@ -978,6 +978,15 @@ button {
   box-shadow: 0 0 60px rgba(249, 240, 2, 0.35);
 }
 
+.banner-text.training {
+  color: var(--yellow);
+  text-shadow:
+    0 0 20px var(--yellow),
+    3px 0 var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: 0 0 60px rgba(0, 240, 255, 0.35);
+}
+
 /* ---------- screen fx ---------- */
 #app.glitch .grid {
   animation: glitchfx 0.45s steps(2);

@@ -198,6 +198,26 @@ export class Game {
     return SHOP_ITEMS;
   }
 
+  /** Where JACK IN / Enter lands: anyone who has not graduated always goes to training. */
+  routeFromTitle(): 'training' | 'op' {
+    if (!this.profile.tutorialDone && !this.run.tutorial) this.startTutorial();
+    return this.run.tutorial ? 'training' : 'op';
+  }
+
+  /** TRAIN button: start training from any state (parking the op), or resume it if already inside. */
+  openTraining(): string[] {
+    if (this.run.tutorial) {
+      return [c.yellow(`>> Resuming Vex training sim, step ${this.run.tutorial.step + 1}/${TUTORIAL_STEPS.length}.`), ...this.tutorialStepLines()];
+    }
+    const parked = !this.run.traced;
+    this.emit({ type: 'clear' });
+    const lines = this.startTutorial();
+    return [
+      c.magenta('Loading Vex training sim...') + (parked ? c.dim(' Your current op is parked and resumes when you finish or skip.') : ''),
+      ...lines,
+    ];
+  }
+
   startTutorial(): string[] {
     if (this.run && !this.run.tutorial && !this.run.traced) this.stash = this.run;
     this.run = {
@@ -1089,9 +1109,7 @@ export class Game {
           if (!this.profile.tutorialDone) err('tutorial: finish training once before you can skip it. Vex insists.');
           return this.finishTutorial(true);
         }
-        if (this.run.tutorial) return [c.dim(`Training step ${this.run.tutorial.step + 1}/${TUTORIAL_STEPS.length}.`), ...this.tutorialStepLines()];
-        this.emit({ type: 'clear' });
-        return [c.magenta('Loading Vex training sim...') + c.dim(' Your current op is parked and resumes when you finish or skip.'), ...this.startTutorial()];
+        return this.openTraining();
       },
       jackout: (args) => {
         if (this.run.tutorial) err(this.profile.tutorialDone ? 'jackout: in training. Use tutorial skip to leave.' : 'jackout: finish training first. Vex is watching.');

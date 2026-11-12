@@ -202,3 +202,70 @@ describe('tutorial', () => {
     expect(loaded.stash?.world.org).toBe(org);
   });
 });
+
+describe('routing into training (title screen and TRAIN button)', () => {
+  it('JACK IN sends a player who never graduated to training, parking any real op', () => {
+    const g = new Game(null, 11, { tutorial: false });
+    g.profile.tutorialDone = false;
+    const org = g.world.org;
+    expect(g.routeFromTitle()).toBe('training');
+    expect(g.inTutorial).toBe(true);
+    expect(g.stash?.world.org).toBe(org);
+  });
+
+  it('JACK IN goes to the op for graduates, and leaves an in-progress training run alone', () => {
+    const vet = new Game(null, 12, { tutorial: false });
+    expect(vet.routeFromTitle()).toBe('op');
+    expect(vet.inTutorial).toBe(false);
+
+    const g = new Game(null, 12);
+    playStep(g);
+    playStep(g);
+    expect(g.routeFromTitle()).toBe('training');
+    expect(g.run.tutorial!.step).toBe(2);
+  });
+
+  it("Jason's save: a migrated NEONTRACE save that never earned anything routes to training from the title", () => {
+    const old = new Game(null, 114392084, { tutorial: false });
+    const data = old.serialize();
+    delete (data.profile as Partial<typeof data.profile>).tutorialDone;
+    const g = new Game(JSON.parse(JSON.stringify(data)));
+    expect(g.routeFromTitle()).toBe('training');
+    expect(g.run.tutorial!.step).toBe(0);
+    expect(g.stash?.world.org).toBe(old.world.org);
+    const reloaded = new Game(g.serialize());
+    expect(reloaded.routeFromTitle()).toBe('training');
+  });
+
+  it('TRAIN from a real op starts training and parks the op; finishing or skipping restores it', () => {
+    const g = new Game(null, 13, { tutorial: false });
+    const org = g.world.org;
+    const out = text(g.openTraining());
+    expect(out).toContain('parked');
+    expect(g.inTutorial).toBe(true);
+    g.exec('tutorial skip');
+    expect(g.world.org).toBe(org);
+  });
+
+  it('TRAIN inside training resumes at the same step instead of doing nothing or restarting', () => {
+    const g = new Game(null, 14);
+    playStep(g);
+    playStep(g);
+    playStep(g);
+    const out = text(g.openTraining());
+    expect(out).toContain('Resuming Vex training sim, step 4/');
+    expect(g.run.tutorial!.step).toBe(3);
+    expect(text(g.exec('tutorial'))).toContain('step 4/');
+  });
+
+  it('TRAIN after being traced starts training without parking the burned op', () => {
+    const g = new Game(null, 15, { tutorial: false });
+    g.run.traced = true;
+    g.openTraining();
+    expect(g.inTutorial).toBe(true);
+    expect(g.stash).toBeNull();
+    g.exec('tutorial skip');
+    expect(g.inTutorial).toBe(false);
+    expect(g.run.traced).toBe(false);
+  });
+});
