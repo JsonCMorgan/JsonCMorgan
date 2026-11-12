@@ -56,8 +56,20 @@ export class GameTerminal {
     this.term.loadAddon(this.fit);
     this.term.open(el);
     this.refit();
-    new ResizeObserver(() => this.refit()).observe(el);
+    const ro = new ResizeObserver(() => this.scheduleRefit());
+    ro.observe(el);
+    if (el.parentElement) ro.observe(el.parentElement);
+    window.addEventListener('resize', () => this.scheduleRefit());
     this.term.onData((d) => this.onData(d));
+  }
+
+  private refitPending = 0;
+  private scheduleRefit() {
+    if (this.refitPending) return;
+    this.refitPending = requestAnimationFrame(() => {
+      this.refitPending = 0;
+      this.refit();
+    });
   }
 
   refit() {
