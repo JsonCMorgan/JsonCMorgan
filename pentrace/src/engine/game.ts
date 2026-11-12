@@ -33,6 +33,8 @@ export interface Mail {
 
 export type ContractStatus = 'locked' | 'active' | 'done';
 
+const EVIDENCE_LOG = '/var/log/auth.log';
+
 export interface Profile {
   version: number;
   credits: number;
@@ -655,7 +657,8 @@ export class Game {
       return { text: step.title, cmd };
     }
     if (r.heat > 65) {
-      if (at && at.root && at.alerted && !at.cleaned) return { text: 'Trace is hot. Scrub this box\'s logs to clear its alert.', cmd: 'rm /var/log/*' };
+      const evidence = at === soc && r.contracts.c3 === 'active';
+      if (at && at.root && at.alerted && !at.cleaned && !evidence) return { text: 'Trace is hot. Scrub this box\'s logs to clear its alert.', cmd: 'rm /var/log/*' };
       if (at?.alerted) return { text: 'Trace is hot. Disconnect so the SOC loses your session.', cmd: 'dc' };
       if (!r.procs.length && r.heat > 50) return { text: 'Lie low. The trace cools while you stay idle and offline.' };
     }
@@ -828,6 +831,10 @@ export class Game {
           const paths = vfs.glob(resolvePath(cwd, t));
           if (!paths.length) err(`rm: cannot remove '${t}': No such file or directory`);
           for (const p of paths) {
+            if (p === EVIDENCE_LOG && host.ip === this.world.socIp && this.run.contracts.c3 === 'active') {
+              out.push(c.yellow(`  rm: kept ${p}. It is the evidence for job c3 (Log Analysis): find the intruder first, then scrub it.`));
+              continue;
+            }
             vfs.remove(p);
             if (host.role !== 'home' && p.startsWith('/var/log/')) {
               this.unlockIndex('covering-tracks');

@@ -40,3 +40,20 @@ export function bindPressEnter(win: EventTarget, action: () => void, opts: Press
   }
   return dispose;
 }
+
+/**
+ * Global hotkeys, also in the capture phase so they work while the terminal has focus.
+ * A handler returns true when it used the key; the key is then kept away from the terminal.
+ */
+export function bindHotkeys(win: EventTarget, handlers: Record<string, (e: KeyboardEvent) => boolean>): () => void {
+  const onKey = (e: Event) => {
+    const ke = e as KeyboardEvent;
+    const h = handlers[ke.key];
+    if (h && h(ke)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+  win.addEventListener('keydown', onKey, { capture: true });
+  return () => win.removeEventListener('keydown', onKey, { capture: true });
+}

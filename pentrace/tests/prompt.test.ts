@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bindPressEnter } from '../src/ui/prompt';
+import { bindHotkeys, bindPressEnter } from '../src/ui/prompt';
 
 function key(k: string, repeat = false) {
   const e = new Event('keydown', { bubbles: true, cancelable: true });
@@ -91,5 +91,22 @@ describe('press ENTER prompts', () => {
     dispose();
     win.dispatchEvent(key('Enter'));
     expect(fired).toBe(0);
+  });
+});
+
+describe('global hotkeys', () => {
+  it('Escape closes a modal even while the terminal would swallow the key, and is left alone otherwise', () => {
+    const win = new EventTarget();
+    let modalOpen = true;
+    let closed = 0;
+    bindHotkeys(win, { Escape: () => (modalOpen ? (closed++, (modalOpen = false), true) : false) });
+    const first = key('Escape');
+    win.dispatchEvent(first);
+    expect(closed).toBe(1);
+    expect(first.defaultPrevented).toBe(true);
+    const second = key('Escape');
+    win.dispatchEvent(second);
+    expect(closed).toBe(1);
+    expect(second.defaultPrevented).toBe(false);
   });
 });

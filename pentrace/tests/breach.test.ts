@@ -183,6 +183,37 @@ describe('breach engine', () => {
   });
 });
 
+describe('log analysis evidence', () => {
+  function onSocWithJobOpen() {
+    const ctx = setup();
+    const { g, soc } = ctx;
+    soc.discovered = true;
+    soc.root = true;
+    soc.alerted = true;
+    g.run.contracts = { c1: 'done', c2: 'done', c3: 'active' };
+    g.exec(`connect ${soc.ip}`);
+    expect(g.connectedHost).toBe(soc);
+    return ctx;
+  }
+
+  it('a hot trace on the SOC box suggests disconnecting, not scrubbing the evidence', () => {
+    const { g } = onSocWithJobOpen();
+    g.run.heat = 80;
+    expect(g.nextHint().cmd).toBe('dc');
+  });
+
+  it('rm keeps auth.log while the Log Analysis job is open, so the job stays solvable', () => {
+    const { g, w } = onSocWithJobOpen();
+    const out = text(g.exec('rm /var/log/*'));
+    expect(out).toContain('kept /var/log/auth.log');
+    expect(text(g.exec('grep Accepted /var/log/auth.log'))).toContain(w.attackerIp);
+    g.exec(`submit c3 ${w.attackerIp}`);
+    expect(g.run.contracts.c3).toBe('done');
+    g.exec('rm /var/log/auth.log');
+    expect(text(g.exec('ls /var/log'))).not.toContain('auth.log');
+  });
+});
+
 describe('contracts: full guided playthrough', () => {
   it('following the hints completes all three jobs, gets paid and stays untraced', () => {
     const { g, w, events } = setup();

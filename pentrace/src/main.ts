@@ -24,7 +24,7 @@ import {
   traceHtml,
 } from './ui/panels';
 import { morph } from './ui/morph';
-import { bindPressEnter } from './ui/prompt';
+import { bindHotkeys, bindPressEnter } from './ui/prompt';
 import { advanceClock } from './engine/clock';
 import { GameTerminal } from './ui/terminal';
 import { TUTORIAL_STEPS } from './engine/tutorial';
@@ -266,12 +266,16 @@ $('#modal').addEventListener('click', (ev) => {
   }
 });
 
-document.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Escape' && modal) closeModal();
-  if (ev.key === 'F1') {
-    ev.preventDefault();
+bindHotkeys(window, {
+  Escape: () => {
+    if (!modal) return false;
+    closeModal();
+    return true;
+  },
+  F1: () => {
     openModal('index');
-  }
+    return true;
+  },
 });
 
 // ------------------------------------------------------------------ chrome buttons
