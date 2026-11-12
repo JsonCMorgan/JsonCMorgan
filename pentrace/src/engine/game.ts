@@ -686,7 +686,7 @@ export class Game {
   private buildCommands(): Record<string, Cmd> {
     const cmds: Record<string, Cmd> = {
       help: () => [
-        c.bold(c.cyan('NEONTRACE // command reference')),
+        c.bold(c.cyan('PENTRACE // command reference')),
         c.magenta(' FILES   ') + 'ls  cd  pwd  cat  rm  mv  grep  head  tail  sort  uniq  wc',
         c.magenta(' NET     ') + 'connect <host>  dc  scan  scp <path>',
         c.magenta(' BREACH  ') + 'nmap  fwrules  fwbypass  sshbrute  webscan  getroot  ps  kill',

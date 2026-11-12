@@ -1,4 +1,4 @@
-# NEONTRACE
+# PenTrace
 
 **Breach. Get paid. Don't get traced.**
 
@@ -6,7 +6,9 @@ A neon cyberpunk hacking roguelite in the spirit of Hacknet. Take contracts from
 
 Everything is simulated. No command ever touches a real network.
 
-![NEONTRACE](docs/screenshot.png)
+The name is penetration testing plus the trace meter. The game was called NEONTRACE in early builds; browser saves from those builds move over to PenTrace automatically the first time you load it.
+
+![PenTrace](docs/screenshot.png)
 
 ## Play it
 
@@ -15,7 +17,7 @@ Everything is simulated. No command ever touches a real network.
 Needs [Node.js](https://nodejs.org) 20 or newer.
 
 ```bash
-cd neontrace
+cd pentrace
 npm install
 npm run dev
 ```
@@ -36,7 +38,7 @@ Handy URL options:
 Needs Node.js plus [Rust](https://rustup.rs) (latest stable) and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your OS. On Windows that is the Microsoft C++ Build Tools and WebView2 (already on Windows 10/11).
 
 ```bash
-cd neontrace
+cd pentrace
 npm install
 npm run tauri:dev      # run the desktop app with hot reload
 npm run tauri:build    # build an installer
@@ -44,13 +46,13 @@ npm run tauri:build    # build an installer
 
 Installers land in `src-tauri/target/release/bundle/`:
 
-- Windows: `nsis/NEONTRACE_0.1.0_x64-setup.exe` and `msi/NEONTRACE_0.1.0_x64_en-US.msi`
-- macOS: `dmg/NEONTRACE_0.1.0_*.dmg`
+- Windows: `nsis/PenTrace_0.1.0_x64-setup.exe` and `msi/PenTrace_0.1.0_x64_en-US.msi`
+- macOS: `dmg/PenTrace_0.1.0_*.dmg`
 - Linux: `deb/*.deb` and `appimage/*.AppImage`
 
 ### Download a build from GitHub Actions
 
-The workflow in `.github/workflows/neontrace.yml` builds Windows, macOS and Linux installers on every push to `main` that touches `neontrace/`, and on pull requests. Open the workflow run on GitHub and download `neontrace-windows` from the Artifacts section. Pushing a tag like `neontrace-v0.1.0` also creates a draft GitHub Release with the installers attached.
+The workflow in `.github/workflows/pentrace.yml` builds Windows, macOS and Linux installers on every push to `main` that touches `pentrace/`, and on pull requests. Open the workflow run on GitHub and download `pentrace-windows` from the Artifacts section. Pushing a tag like `pentrace-v0.1.0` also creates a draft GitHub Release with the installers attached.
 
 ## How to play
 
@@ -100,7 +102,7 @@ Python scripting via Pyodide, the **Workshop** (build your own scanners, cracker
 ## Project layout
 
 ```
-neontrace/
+pentrace/
   src/engine/        game logic, no DOM (fully unit tested)
     parser.ts        command line parsing: quotes, escapes, pipes, flags
     vfs.ts           in-memory filesystem per host

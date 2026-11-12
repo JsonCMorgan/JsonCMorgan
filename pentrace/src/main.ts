@@ -27,9 +27,13 @@ import { morph } from './ui/morph';
 import { GameTerminal } from './ui/terminal';
 import { TUTORIAL_STEPS } from './engine/tutorial';
 import { TRAINING_INTRUDER_IP, TRAINING_VAULT_IP } from './engine/network';
+import { migrateLegacyStorage, PREFS_KEY, SAVE_KEY } from './engine/storage';
 
-const SAVE_KEY = 'neontrace-save-v1';
-const PREFS_KEY = 'neontrace-prefs-v1';
+try {
+  migrateLegacyStorage(localStorage);
+} catch {
+  // storage full or blocked: the game still runs, it just starts fresh
+}
 const params = new URLSearchParams(location.search);
 const demoMode = params.has('demo');
 const tutorialDemo = params.has('tutorialdemo');
@@ -380,7 +384,7 @@ function showTitle() {
   const t = $('#title');
   const cont = hadSave && !params.has('fresh');
   t.innerHTML = `<div class="title-inner">
-    <div class="logo glitch-title" data-text="NEONTRACE">NEONTRACE</div>
+    <div class="logo glitch-title" data-text="PenTrace">PenTrace</div>
     <div class="tagline">BREACH. GET PAID. <span>DON'T GET TRACED.</span></div>
     <div class="title-btns">
       <button class="big-btn" id="jack-in">${
@@ -464,7 +468,7 @@ async function runDemo() {
   renderModal();
   await sleep(3500);
   closeModal();
-  (window as unknown as { neontraceDemoDone: boolean }).neontraceDemoDone = true;
+  (window as unknown as { pentraceDemoDone: boolean }).pentraceDemoDone = true;
 }
 
 async function runTutorialDemo() {
@@ -520,7 +524,7 @@ async function runTutorialDemo() {
     }
   }
   await pause(4000);
-  (window as unknown as { neontraceDemoDone: boolean }).neontraceDemoDone = true;
+  (window as unknown as { pentraceDemoDone: boolean }).pentraceDemoDone = true;
 }
 
 // ------------------------------------------------------------------ main loop
@@ -549,4 +553,4 @@ renderAll();
 showTitle();
 requestAnimationFrame(frame);
 window.addEventListener('beforeunload', persist);
-(window as unknown as { neontrace: unknown }).neontrace = { get game() { return game; }, INDEX_BY_ID, reset: () => (game = new Game(null)) };
+(window as unknown as { pentrace: unknown }).pentrace = { get game() { return game; }, INDEX_BY_ID, reset: () => (game = new Game(null)) };

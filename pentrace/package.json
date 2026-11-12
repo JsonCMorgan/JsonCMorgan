@@ -1,8 +1,8 @@
 {
-  "name": "neontrace",
+  "name": "pentrace",
   "private": true,
   "version": "0.1.0",
-  "description": "NEONTRACE: a neon cyberpunk hacking roguelite. Breach simulated networks, get paid, learn real security.",
+  "description": "PenTrace: a neon cyberpunk hacking roguelite. Breach simulated networks, get paid, learn real security.",
   "type": "module",
   "scripts": {
     "dev": "vite",
