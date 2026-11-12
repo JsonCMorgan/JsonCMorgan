@@ -6,7 +6,7 @@ export type GameEvent =
   | { type: 'toast'; kind: ToastKind; title: string; body?: string }
   | { type: 'fx'; fx: Fx }
   | { type: 'sound'; sound: Sound }
-  | { type: 'open'; panel: 'index' | 'shop' | 'jobs' | 'mail' | 'contacts' | 'perks'; arg?: string }
+  | { type: 'open'; panel: 'index' | 'shop' | 'jobs' | 'mail' | 'contacts' | 'perks' | 'tickets'; arg?: string }
   | { type: 'print'; lines: string[] }
   | { type: 'clear' }
   | { type: 'traced' }

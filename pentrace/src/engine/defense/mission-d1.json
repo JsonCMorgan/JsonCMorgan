@@ -1,0 +1,42 @@
+{
+  "id": "d1-sla-spray",
+  "title": "SLA Race: Password Spray",
+  "client": "NorthPeak",
+  "primaryTicket": "BT-2026-0103",
+  "expectedIoc": "203.0.113.44",
+  "mitre": "T1110.003",
+  "slaMinutes": 12,
+  "handler": {
+    "from": "Handler Reeves",
+    "shiftSubject": "L1 SHIFT // NorthPeak MSSP (preview)",
+    "shiftBody": [
+      "Training shift only — not a 24/7 NOC.",
+      "Three tickets in queue. CRITICAL spray on NorthPeak must not breach SLA while you chase INFO noise.",
+      "Use tickets, socsearch, disposition, then submit defense <ioc> with TP set.",
+      "Type defense exit to return to offense preview."
+    ],
+    "triageBullets": [
+      "Pattern: failed SSH spray then single Accepted from one external IP.",
+      "Not a VPN flap — no matching change ticket.",
+      "Recommend: block source, force MFA, reset affected account.",
+      "Disposition: true_positive before you submit the IOC."
+    ]
+  },
+  "socsearchOutput": [
+    "search index=auth earliest=-4h client=NorthPeak",
+    "| stats count by src_ip, action",
+    "| where action=\"Accepted\"",
+    "",
+    "src_ip          action    count",
+    "203.0.113.44    Accepted  1",
+    "203.0.113.44    Failed    412",
+    "",
+    "NOTE: 412 failures followed by 1 success — classic password spray."
+  ],
+  "authLogPath": "/home/ghost/cases/northpeak-auth.log",
+  "authLogLines": [
+    "Mar 12 06:48:01 finance-ws-02 sshd[1842]: Failed password for admin from 203.0.113.44 port 44012 ssh2",
+    "Mar 12 06:48:02 finance-ws-02 sshd[1842]: Failed password for admin from 203.0.113.44 port 44012 ssh2",
+    "Mar 12 06:49:14 finance-ws-02 sshd[1842]: Accepted password for admin from 203.0.113.44 port 44012 ssh2"
+  ]
+}

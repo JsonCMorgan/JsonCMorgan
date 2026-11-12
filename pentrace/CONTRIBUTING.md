@@ -31,6 +31,32 @@ Focus: `tests/tutorial.test.ts`, `tests/help-pages.test.ts`, `tests/contracts-ga
 
 Design context: Project store `docs/hacknet-criticism-accessibility.md`.
 
+## 5-minute defense slice smoke (L1 preview)
+
+Playable **Defense Mode vertical slice** — not story M7. Fictional MSSP clients only.
+
+### Entry
+
+- URL: `?fresh=1&defense=1` (after training done), or title screen **DEFENSE PREVIEW**, or top bar **DEFENSE** (toggles exit when in shift).
+- Terminal: `defense preview` / `defense exit`.
+
+### Pass checklist
+
+| Step | Command | Pass if |
+| --- | --- | --- |
+| 1 | Read mail | Handler shift briefing visible |
+| 2 | `ticket BT-2026-0103` | CRITICAL spray ticket active; SLA panel counts down |
+| 3 | `socsearch` or `grep Failed ~/cases/northpeak-auth.log` | Shows `203.0.113.44` spray pattern |
+| 4 | `disposition tp` | Disposition set |
+| 5 | `submit defense 203.0.113.44` | Ticket closed; +Operator XP |
+| 6 | `defense exit` | Neon offense theme returns |
+
+### Regression
+
+```bash
+cd pentrace && npm test -- defense-slice
+```
+
 ## Local mission writer (Ollama)
 
 Procedural mission **copy** can be drafted with a local LLM. Mechanics (network layout, kill chains) stay deterministic; Ollama only proposes mail and fiction.

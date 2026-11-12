@@ -1,0 +1,31 @@
+{
+  "tickets": [
+    {
+      "id": "BT-2026-0103",
+      "client": "NorthPeak",
+      "priority": 1,
+      "severity": "CRITICAL",
+      "title": "SSH password spray → success",
+      "mitre": "T1110.003",
+      "status": "working"
+    },
+    {
+      "id": "BT-2026-0098",
+      "client": "Contoso",
+      "priority": 4,
+      "severity": "INFO",
+      "title": "Defender routine scan",
+      "mitre": "T1082",
+      "status": "new"
+    },
+    {
+      "id": "BT-2026-0101",
+      "client": "Harbor",
+      "priority": 2,
+      "severity": "MEDIUM",
+      "title": "Firewall deny burst",
+      "mitre": "T1046",
+      "status": "new"
+    }
+  ]
+}

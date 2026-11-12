@@ -24,8 +24,10 @@ import {
   ramHtml,
   shopModalHtml,
   targetHtml,
+  ticketsModalHtml,
   traceHtml,
 } from './ui/panels';
+import { startDefensePreview } from './engine/game-defense';
 import { morph } from './ui/morph';
 import { bindHotkeys, bindPressEnter } from './ui/prompt';
 import { advanceClock } from './engine/clock';
@@ -49,6 +51,7 @@ try {
 const params = new URLSearchParams(location.search);
 const demoMode = params.has('demo');
 const tutorialDemo = params.has('tutorialdemo');
+const defenseEntry = params.has('defense');
 if (params.has('fresh')) localStorage.removeItem(SAVE_KEY);
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -73,7 +76,7 @@ const synth = new Synth();
 synth.enabled = game.profile.sound;
 
 let focusIp: string | null = game.world.gatewayIp;
-let modal: { kind: 'index' | 'shop' | 'jobs' | 'mail' | 'contacts' | 'perks'; arg?: string } | null = null;
+let modal: { kind: 'index' | 'shop' | 'jobs' | 'mail' | 'contacts' | 'perks' | 'tickets'; arg?: string } | null = null;
 let shownCredits = game.profile.credits;
 
 let tutorialStuckSec = 0;
@@ -174,7 +177,7 @@ function onEvent(e: GameEvent) {
       fx(e.fx);
       break;
     case 'open':
-      if (e.panel === 'index' || e.panel === 'shop') openModal(e.panel, e.arg);
+      if (e.panel === 'index' || e.panel === 'shop' || e.panel === 'tickets') openModal(e.panel, e.arg);
       break;
     case 'traced':
       showTraced();
@@ -248,7 +251,17 @@ function setHtml(id: string, html: string) {
   else morph($(id), html);
 }
 
+function applyPhaseChrome() {
+  const def = game.inDefenseMode;
+  document.documentElement.dataset.phase = def ? 'defense' : 'offense';
+  $('#btn-jobs').textContent = def ? 'TICKETS' : 'JOBS';
+  const bar = $('.term-title');
+  if (bar) bar.textContent = def ? 'soc // l1-console' : 'neosh // ghost-rig';
+  $('#btn-defense')?.classList.toggle('active-defense', def);
+}
+
 function renderAll() {
+  applyPhaseChrome();
   setHtml('#trace', traceHtml(game));
   setHtml('#ram', ramHtml(game));
   setHtml('#guide', guideHtml(game, prefs.tutorial));
@@ -259,7 +272,9 @@ function renderAll() {
   const unreadIdx = Object.values(game.profile.index).filter((x) => !x.read).length;
   setHtml(
     '#topinfo',
-    `${operatorRankHtml(game)}<span class="op">OP #${game.profile.runs}</span><span class="org">${esc(game.world.org)}</span>`,
+    game.inDefenseMode
+      ? `<span class="op">MONITOR</span><span class="org">L1 SHIFT · ${esc(game.world.org)}</span><span class="preview-pill">PREVIEW</span>`
+      : `${operatorRankHtml(game)}<span class="op">OP #${game.profile.runs}</span><span class="org">${esc(game.world.org)}</span>`,
   );
   setHtml('#mail-badge', unreadMail ? String(unreadMail) : '');
   setHtml('#index-badge', unreadIdx ? String(unreadIdx) : '');
@@ -282,7 +297,7 @@ function renderCredits(dt: number) {
 }
 
 // ------------------------------------------------------------------ modals
-function openModal(kind: 'index' | 'shop' | 'jobs' | 'mail' | 'contacts' | 'perks', arg?: string) {
+function openModal(kind: 'index' | 'shop' | 'jobs' | 'mail' | 'contacts' | 'perks' | 'tickets', arg?: string) {
   modal = { kind, arg };
   $('#modal').hidden = false;
   cache.delete('#modal-box');
@@ -301,8 +316,10 @@ function renderModal() {
       ? indexModalHtml(game, modal.arg)
       : modal.kind === 'shop'
         ? shopModalHtml(game)
-        : modal.kind === 'jobs'
-          ? jobsModalHtml(game)
+        : modal.kind === 'tickets'
+          ? ticketsModalHtml(game)
+          : modal.kind === 'jobs'
+            ? jobsModalHtml(game)
           : modal.kind === 'contacts'
             ? contactsModalHtml(game)
             : modal.kind === 'perks'
@@ -367,7 +384,16 @@ bindHotkeys(window, {
 
 // ------------------------------------------------------------------ chrome buttons
 $('#btn-mail').addEventListener('click', () => openModal('mail'));
-$('#btn-jobs').addEventListener('click', () => openModal('jobs'));
+$('#btn-jobs').addEventListener('click', () => openModal(game.inDefenseMode ? 'tickets' : 'jobs'));
+$('#btn-defense').addEventListener('click', () => {
+  if (modal) closeModal();
+  const out = game.inDefenseMode ? game.exec('defense exit') : startDefensePreview(game);
+  if (out.length) term.print(out);
+  if (game.inDefenseMode && !game.run.defense) void boot(true);
+  persist();
+  renderAll();
+  term.focus();
+});
 $('#btn-contacts').addEventListener('click', () => openModal('contacts'));
 $('#btn-perks').addEventListener('click', () => openModal('perks'));
 $('#btn-shop').addEventListener('click', () => openModal('shop'));
@@ -479,6 +505,14 @@ async function boot(short = false) {
     synth.play('blip');
     await sleep(short ? 120 : 260);
   }
+  if (game.inDefenseMode) {
+    banner('L1 DEFENSE SHIFT', 'defense');
+    term.writeRaw('\r\n' + c.green('>> SOC training shift (preview).') + c.dim(' TICKETS · socsearch · disposition tp · submit defense <ioc>') + '\r\n\r\n');
+    term.locked = false;
+    term.showPrompt();
+    term.focus();
+    return;
+  }
   if (game.inTutorial) {
     banner('TRAINING SIM', 'training');
     term.writeRaw('\r\n' + c.yellow('>> VEX TRAINING SIM loaded.') + c.dim(' Follow Vex one step at a time. The NEXT STEP panel shows what to type.') + '\r\n');
@@ -518,6 +552,7 @@ function showTitle() {
       }</button>
       <div class="row">
         ${game.profile.tutorialDone && !game.inTutorial ? '<button class="ghost-btn" id="train">TRAINING SIM</button>' : ''}
+        ${game.profile.tutorialDone ? '<button class="ghost-btn" id="defense-title">DEFENSE PREVIEW</button>' : ''}
         ${cont ? '<button class="ghost-btn" id="wipe">NEW GAME (wipe save)</button>' : ''}
       </div>
     </div>
@@ -540,7 +575,8 @@ function showTitle() {
     }, 600);
     term.focus();
     if (training && !game.inTutorial) game.startTutorial();
-    game.routeFromTitle();
+    if (defenseEntry && game.profile.tutorialDone) startDefensePreview(game);
+  else game.routeFromTitle();
     persist();
     renderAll();
     void boot().then(() => {
@@ -550,9 +586,21 @@ function showTitle() {
   };
   const disposeEnter = bindPressEnter(window, () => go(), {
     clickTargets: [$('#jack-in')],
-    ignore: () => ['train', 'wipe'].includes(document.activeElement?.id ?? ''),
+    ignore: () => ['train', 'wipe', 'defense-title'].includes(document.activeElement?.id ?? ''),
   });
   $('#train')?.addEventListener('click', () => go(true));
+  $('#defense-title')?.addEventListener('click', () => {
+    started = true;
+    disposeEnter();
+    t.classList.add('out');
+    setTimeout(() => {
+      t.hidden = true;
+    }, 600);
+    startDefensePreview(game);
+    persist();
+    renderAll();
+    void boot();
+  });
   $('#wipe')?.addEventListener('click', () => {
     if (!confirm('Wipe your save and start over?')) return;
     localStorage.removeItem(SAVE_KEY);

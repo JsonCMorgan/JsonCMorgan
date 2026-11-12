@@ -1,4 +1,5 @@
 import { activeJobChecklist } from '../engine/contract-checklist';
+import { defenseChecklist } from '../engine/defense-checklist';
 import { CONTRACTS } from '../engine/content/contracts';
 import { INDEX_BY_ID, INDEX_ENTRIES } from '../engine/content/index-entries';
 import { SHOP_ITEMS } from '../engine/content/shop';
@@ -29,7 +30,34 @@ function checklistHtml(items: { label: string; done: boolean }[]): string {
     .join('')}</div>`;
 }
 
+export function slaHtml(g: Game): string {
+  const d = g.run.defense!;
+  const pct = (d.slaRemainingSec / d.slaTotalSec) * 100;
+  const level = pct <= 25 ? 'crit' : pct <= 50 ? 'hot' : pct <= 75 ? 'warm' : 'cool';
+  const label =
+    d.outcome === 'won'
+      ? 'SHIFT CLEAR'
+      : d.outcome === 'lost_sla'
+        ? 'SLA BREACH'
+        : d.outcome === 'lost_wrong'
+          ? 'REVIEW REQUIRED'
+          : pct <= 25
+            ? 'SLA CRITICAL'
+            : 'ON SHIFT';
+  const mins = Math.ceil(d.slaRemainingSec / 60);
+  return `
+    <div class="panel-title">SLA <span class="dim">// ${d.activeTicketId}</span></div>
+    <div class="trace-readout ${level}">
+      <span class="trace-pct">${mins}<small>m</small></span>
+      <span class="trace-state">${label}</span>
+    </div>
+    <div class="meter trace-meter ${level}"><div class="fill" style="width:${pct}%"></div>
+      <i style="left:25%"></i><i style="left:50%"></i></div>
+    <div class="meter-labels"><span>breach</span><span>watch</span><span>ok</span></div>`;
+}
+
 export function traceHtml(g: Game): string {
+  if (g.run.defense) return slaHtml(g);
   const h = g.run.heat;
   const level = h >= 75 ? 'crit' : h >= 50 ? 'hot' : h >= 25 ? 'warm' : 'cool';
   const label = g.run.traced
@@ -53,7 +81,22 @@ export function traceHtml(g: Game): string {
     <div class="meter-labels"><span>0</span><span>50 analyst</span><span>75 flag</span><span>100</span></div>`;
 }
 
+export function shiftHtml(g: Game): string {
+  const d = g.run.defense!;
+  const open = d.tickets.filter((t) => t.status !== 'closed').length;
+  return `
+    <div class="panel-title">SHIFT <span class="dim">// L1 preview</span></div>
+    <div class="dim" style="margin-bottom:8px">Open tickets: <b>${open}</b> · Client mix: Contoso, NorthPeak, Harbor</div>
+    <div class="job-checklist">${d.tickets
+      .map(
+        (t) =>
+          `<div class="check-row ${t.status === 'closed' ? 'done' : t.id === d.activeTicketId ? '' : ''}"><span class="check-box">${t.id === d.activeTicketId ? '▸' : '○'}</span><span>P${t.priority} ${esc(t.id)} · ${esc(t.severity)}</span></div>`,
+      )
+      .join('')}</div>`;
+}
+
 export function ramHtml(g: Game): string {
+  if (g.run.defense) return shiftHtml(g);
   const used = g.usedRam;
   const max = g.maxRam;
   const procs = g.run.procs
@@ -74,6 +117,15 @@ export function ramHtml(g: Game): string {
 export function guideHtml(g: Game, tutorial: boolean): string {
   const h = g.nextHint();
   const t = g.run.tutorial;
+  const def = g.run.defense;
+  if (def) {
+    return `
+    <div class="panel-title">L1 SHIFT <span class="dim">// defense preview</span></div>
+    <div class="guide-text">${esc(h.text)}</div>
+    ${h.cmd ? `<button class="chip" data-cmd="${esc(h.cmd)}">▸ ${esc(h.cmd)}</button>` : ''}
+    ${checklistHtml(defenseChecklist(g))}
+    <div class="dim train-foot">Training shift only — not 24/7 NOC. defense exit returns to offense.</div>`;
+  }
   if (t) {
     const pct = (t.step / TUTORIAL_STEPS.length) * 100;
     return `
@@ -92,6 +144,16 @@ export function guideHtml(g: Game, tutorial: boolean): string {
 }
 
 export function targetHtml(g: Game, focus: Host | null): string {
+  if (g.run.defense) {
+    const d = g.run.defense;
+    const active = d.tickets.find((t) => t.id === d.activeTicketId);
+    return `
+    <div class="panel-title">SOC CONSOLE <span class="dim">// monitor</span></div>
+    <div class="target-head"><div><div class="target-name">${active?.client ?? 'Queue'}</div><div class="target-ip">${esc(d.activeTicketId)}</div></div>
+      <div class="badge root">L1 ANALYST</div></div>
+    <p class="dim">${active ? esc(active.title) : 'Pick a ticket'}</p>
+    <p class="dim">socsearch · grep ~/cases/northpeak-auth.log · disposition · submit defense &lt;ioc&gt;</p>`;
+  }
   if (!focus) return `<div class="panel-title">TARGET</div><div class="dim">no target</div>`;
   const h = focus;
   const connected = g.run.connected === h.ip;
@@ -133,7 +195,26 @@ export function targetHtml(g: Game, focus: Host | null): string {
 
 const POS: Record<string, [number, number]> = { home: [60, 160], gateway: [185, 160], soc: [310, 62], finance: [310, 258] };
 
+export function ticketsModalHtml(g: Game): string {
+  const d = g.run.defense!;
+  const cards = d.tickets
+    .map((t) => {
+      const st = t.id === d.activeTicketId ? 'active' : t.status;
+      return `<div class="job-card ${st}"><div class="job-top"><span class="tag">${esc(t.id)} · ${esc(t.severity)}</span><span class="pay">P${t.priority}</span></div>
+      <div class="job-title">${esc(t.client)} — ${esc(t.title)}</div><div class="dim">${esc(t.mitre)}</div><div class="job-state">${st.toUpperCase()}</div></div>`;
+    })
+    .join('');
+  return `<div class="modal-head"><h3>MISSION QUEUE <span class="dim preview-badge">L1 PREVIEW</span></h3><button class="x" data-close>✕</button></div>
+    <div class="dim modal-sub">${checklistHtml(defenseChecklist(g))}</div>
+    <div class="jobs-grid">${cards}</div>`;
+}
+
 export function netmapHtml(g: Game, focusIp: string | null): string {
+  if (g.run.defense) {
+    return `<div class="panel-title">CLIENTS <span class="dim">// tags</span></div>
+      <div class="dim client-tags"><span class="tag">Contoso</span><span class="tag">NorthPeak</span><span class="tag">Harbor</span></div>
+      <p class="dim" style="margin-top:12px">Breach netmap parked during SOC shift.</p>`;
+  }
   const hosts = g.world.hosts;
   const lines: string[] = [];
   for (const h of hosts) {

@@ -8,6 +8,7 @@ export const BURN_RUN_STANDING_PENALTY = 2;
 
 export type FixerId = 'vex' | 'relay' | 'kurohashi' | 'merit' | 'cap' | 'cipher';
 export type PerkId = 'timedrive' | 'ram_overclock';
+export type GamePhase = 'offense' | 'defense';
 
 export interface FixerDef {
   id: FixerId;
@@ -52,6 +53,8 @@ export interface ProgressionProfile {
   pendingPerkPick: boolean;
   freeRespecThisRun: boolean;
   metFixers: FixerId[];
+  /** offense = breach ops; defense = L1 SOC preview / M7 arc */
+  gamePhase?: GamePhase;
 }
 
 export const FIXERS = fixersData.fixers as FixerDef[];
@@ -139,6 +142,7 @@ export function defaultProgression(version: number): Pick<
     pendingPerkPick: false,
     freeRespecThisRun: false,
     metFixers: [],
+    gamePhase: 'offense',
   };
 }
 
@@ -161,6 +165,7 @@ export function migrateProfile(profile: Record<string, unknown>, tutorialDone: b
   profile.pendingPerkPick ??= prog.pendingPerkPick;
   profile.freeRespecThisRun ??= prog.freeRespecThisRun;
   profile.metFixers ??= prog.metFixers;
+  profile.gamePhase ??= 'offense';
   if (tutorialDone) {
     profile.vexGraduated ??= true;
     profile.relayUnlocked ??= true;

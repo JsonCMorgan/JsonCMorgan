@@ -228,6 +228,24 @@ export const INDEX_ENTRIES: IndexEntry[] = [
     ],
     related: ['ssh-credential-attacks', 'weak-default-creds'],
   },
+  {
+    id: 'soc-disposition',
+    title: 'SOC Disposition & Case Closure',
+    category: 'Blue Team',
+    tier: 3,
+    unlockHint: 'Set disposition tp on a training shift ticket.',
+    realWorld: [
+      'Tier 1 closes or escalates with a disposition: false positive, true positive, or escalate. TP requires documented evidence and often lead approval before containment.',
+    ],
+    inGame: [
+      'disposition fp|tp|escalate then submit defense <ioc> on the preview shift.',
+      'Closing a spray as FP when auth.log shows fail→accept is a training fail.',
+    ],
+    defense: [
+      'Match the story to the data before you close. SLA clocks punish chasing INFO while CRITICAL waits.',
+    ],
+    related: ['log-analysis', 'the-trace'],
+  },
 ];
 
 export const INDEX_BY_ID = Object.fromEntries(INDEX_ENTRIES.map((e) => [e.id, e]));

@@ -1719,3 +1719,49 @@ button {
   color: var(--yellow);
   font-size: 11px;
 }
+
+/* ---------- Defense phase (L1 SOC preview) ---------- */
+html[data-phase='defense'] {
+  --bg: #030a08;
+  --bg2: #051510;
+  --panel: rgba(8, 28, 22, 0.88);
+  --cyan: #2dff9a;
+  --magenta: #00e5c3;
+  --yellow: #ffc247;
+  --text: #d8fff0;
+  --dim: #6b9b88;
+}
+html[data-phase='defense'] #app {
+  background:
+    radial-gradient(ellipse at 15% -10%, rgba(45, 255, 154, 0.14), transparent 50%),
+    linear-gradient(180deg, var(--bg2), var(--bg));
+}
+html[data-phase='defense'] #app::before {
+  background-image:
+    linear-gradient(rgba(45, 255, 154, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 255, 154, 0.05) 1px, transparent 1px);
+}
+.preview-btn {
+  border-color: rgba(255, 194, 71, 0.55) !important;
+  color: var(--yellow) !important;
+}
+.preview-btn.active-defense {
+  background: rgba(45, 255, 154, 0.2);
+  color: var(--cyan) !important;
+}
+.preview-pill {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--yellow);
+  border: 1px solid rgba(255, 194, 71, 0.4);
+  padding: 2px 6px;
+  margin-left: 8px;
+}
+.banner-text.defense {
+  color: var(--cyan);
+}
+.preview-badge {
+  color: var(--yellow);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
