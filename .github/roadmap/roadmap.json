@@ -216,12 +216,12 @@
     {
       "title": "chore: format src and tests with Prettier in one commit",
       "labels": ["type:chore", "area:build"],
-      "body": "Prettier currently skips `neontrace/src/`, `tests/`, `index.html` and `README.md` because that code predates the formatter (see `neontrace/.prettierignore`).\n\nOnce in-flight game PRs have merged:\n1. Remove those lines from `.prettierignore`.\n2. Run `npm run format` as a single `style:` commit with no other changes.\n3. Add that commit SHA to a root `.git-blame-ignore-revs` so `git blame` skips it.\n\n**Done when**\n- [ ] `npm run format:check` covers all source"
+      "body": "Prettier currently skips `pentrace/src/`, `tests/`, `index.html` and `README.md` because that code predates the formatter (see `pentrace/.prettierignore`).\n\nOnce in-flight game PRs have merged:\n1. Remove those lines from `.prettierignore`.\n2. Run `npm run format` as a single `style:` commit with no other changes.\n3. Add that commit SHA to a root `.git-blame-ignore-revs` so `git blame` skips it.\n\n**Done when**\n- [ ] `npm run format:check` covers all source"
     },
     {
       "title": "chore: re-enable consistent-type-imports lint rule",
       "labels": ["type:chore", "area:build"],
-      "body": "`@typescript-eslint/consistent-type-imports` was left off when ESLint was introduced because enabling it needs source edits (8 imports that are type-only). Turn it on and run `npm run lint:fix` in a quiet moment between feature PRs."
+      "body": "`@typescript-eslint/consistent-type-imports` was left off when ESLint was introduced because enabling it needs source edits (9 imports that are type-only). Turn it on and run `npm run lint:fix` in a quiet moment between feature PRs."
     },
     {
       "title": "chore: drop the TypeScript 6 lint shim once typescript-eslint supports TS 7",
@@ -231,7 +231,7 @@
     {
       "title": "test: raise engine coverage and ratchet the floor",
       "labels": ["type:chore", "area:tests"],
-      "body": "Coverage is about 44% of lines with a floor of 35% in `neontrace/vite.config.ts`. Add tests for `game.ts` command paths and content definitions, then raise the thresholds to just below the new numbers so coverage can only go up."
+      "body": "Coverage is about 56% of lines with a floor of 35% in `pentrace/vite.config.ts`. Add tests for `game.ts` command paths and content definitions, then raise the thresholds to just below the new numbers so coverage can only go up."
     }
   ]
 }

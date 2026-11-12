@@ -34,4 +34,4 @@ jobs:
           requireScope: false
           subjectPattern: ^(?![A-Z]).+$
           subjectPatternError: |
-            Start the subject with a lowercase letter, e.g. "feat(neontrace): add proxy overload layer".
+            Start the subject with a lowercase letter, e.g. "feat(pentrace): add proxy overload layer".

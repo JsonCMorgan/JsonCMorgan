@@ -1,17 +1,17 @@
-name: NEONTRACE installers
+name: PenTrace installers
 
 on:
   push:
     branches: [main]
     paths:
-      - 'neontrace/**'
-      - '.github/workflows/neontrace.yml'
+      - 'pentrace/**'
+      - '.github/workflows/pentrace.yml'
   pull_request:
     paths:
-      - 'neontrace/**'
-      - '.github/workflows/neontrace.yml'
+      - 'pentrace/**'
+      - '.github/workflows/pentrace.yml'
   workflow_dispatch:
-  # Called by neontrace-release.yml to attach installers to a GitHub Release.
+  # Called by pentrace-release.yml to attach installers to a GitHub Release.
   workflow_call:
     inputs:
       ref:
@@ -63,9 +63,9 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: neontrace/.nvmrc
+          node-version-file: pentrace/.nvmrc
           cache: npm
-          cache-dependency-path: neontrace/package-lock.json
+          cache-dependency-path: pentrace/package-lock.json
 
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
@@ -74,15 +74,15 @@ jobs:
 
       - uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          workspaces: neontrace/src-tauri -> target
+          workspaces: pentrace/src-tauri -> target
 
       - run: npm ci
-        working-directory: neontrace
+        working-directory: pentrace
 
       - name: Build installer
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
         with:
-          projectPath: neontrace
+          projectPath: pentrace
           args: ${{ matrix.args }}
           releaseId: ${{ inputs.release-id || '' }}
           retryAttempts: 1
@@ -92,12 +92,12 @@ jobs:
       - name: Upload installers
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: neontrace-${{ matrix.name }}
+          name: pentrace-${{ matrix.name }}
           if-no-files-found: error
           retention-days: 14
           path: |
-            neontrace/src-tauri/target/release/bundle/nsis/*.exe
-            neontrace/src-tauri/target/release/bundle/msi/*.msi
-            neontrace/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-            neontrace/src-tauri/target/release/bundle/deb/*.deb
-            neontrace/src-tauri/target/release/bundle/appimage/*.AppImage
+            pentrace/src-tauri/target/release/bundle/nsis/*.exe
+            pentrace/src-tauri/target/release/bundle/msi/*.msi
+            pentrace/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            pentrace/src-tauri/target/release/bundle/deb/*.deb
+            pentrace/src-tauri/target/release/bundle/appimage/*.AppImage

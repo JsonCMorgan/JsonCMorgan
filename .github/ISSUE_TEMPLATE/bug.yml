@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in NEONTRACE is broken or behaves wrong
+description: Something in PenTrace is broken or behaves wrong
 title: 'bug: '
 labels: [type:bug, needs-triage]
 body:
@@ -45,7 +45,7 @@ body:
     id: version
     attributes:
       label: Version or commit
-      description: Release tag (e.g. neontrace-v0.2.0) or commit SHA.
+      description: Release tag (e.g. pentrace-v0.2.0) or commit SHA.
   - type: textarea
     id: extra
     attributes:

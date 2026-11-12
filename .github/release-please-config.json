@@ -4,10 +4,10 @@
   "tag-separator": "-",
   "separate-pull-requests": true,
   "packages": {
-    "neontrace": {
+    "pentrace": {
       "release-type": "node",
-      "component": "neontrace",
-      "package-name": "neontrace",
+      "component": "pentrace",
+      "package-name": "pentrace",
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": false,

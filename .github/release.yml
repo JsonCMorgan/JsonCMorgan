@@ -1,4 +1,4 @@
-# Categories for GitHub's auto-generated release notes (manual neontrace-v* tags).
+# Categories for GitHub's auto-generated release notes (manual pentrace-v* tags).
 changelog:
   exclude:
     labels: [skip-changelog, dependencies]

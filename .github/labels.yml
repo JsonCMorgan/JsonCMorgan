@@ -18,13 +18,13 @@
 # Area
 - name: area:engine
   color: 1d76db
-  description: Simulation core (neontrace/src/engine)
+  description: Simulation core (pentrace/src/engine)
 - name: area:ui
   color: 5319e7
-  description: Terminal, panels, effects (neontrace/src/ui)
+  description: Terminal, panels, effects (pentrace/src/ui)
 - name: area:desktop
   color: 0e8a16
-  description: Tauri shell and installers (neontrace/src-tauri)
+  description: Tauri shell and installers (pentrace/src-tauri)
 - name: area:ci
   color: 000000
   description: GitHub Actions and repo automation

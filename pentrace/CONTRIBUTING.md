@@ -1,4 +1,4 @@
-# Contributing to NEONTRACE
+# Contributing to PenTrace
 
 Thanks for helping build the rig. This page covers setup, the checks CI runs, how commits and releases work, and where things live.
 
@@ -7,7 +7,7 @@ Thanks for helping build the rig. This page covers setup, the checks CI runs, ho
 Needs Node.js 22 (see `.nvmrc`). For the desktop app you also need Rust stable and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ```bash
-cd neontrace
+cd pentrace
 npm ci
 npm run dev          # browser build at http://127.0.0.1:1420
 npm run tauri:dev    # desktop app with hot reload
@@ -34,14 +34,14 @@ Prettier currently skips `src/`, `tests/`, `index.html` and `README.md` (see `.p
 
 ## What CI checks
 
-| Workflow             | When                                 | What                                                                                                                                                                                 |
-| -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| NEONTRACE CI         | Every PR and push to `main`          | Lint, Prettier, typecheck, tests with coverage, web build, Rust fmt + clippy. Jobs only run when `neontrace/` changes; the `CI result` job always reports and is the one to require. |
-| NEONTRACE installers | PRs and `main` touching `neontrace/` | Windows, macOS and Linux installers as downloadable artifacts                                                                                                                        |
-| PR title             | Every PR                             | Title must be a conventional commit                                                                                                                                                  |
-| CodeQL               | PRs, `main`, weekly                  | Security analysis of TypeScript, Rust and the workflows                                                                                                                              |
-| Dependency review    | Every PR                             | Blocks new dependencies with known vulnerabilities or GPL/AGPL licenses                                                                                                              |
-| PR labeler           | Every PR                             | Adds `area:*` labels from the changed paths                                                                                                                                          |
+| Workflow            | When                                | What                                                                                                                                                                                |
+| ------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PenTrace CI         | Every PR and push to `main`         | Lint, Prettier, typecheck, tests with coverage, web build, Rust fmt + clippy. Jobs only run when `pentrace/` changes; the `CI result` job always reports and is the one to require. |
+| PenTrace installers | PRs and `main` touching `pentrace/` | Windows, macOS and Linux installers as downloadable artifacts                                                                                                                       |
+| PR title            | Every PR                            | Title must be a conventional commit                                                                                                                                                 |
+| CodeQL              | PRs, `main`, weekly                 | Security analysis of TypeScript, Rust and the workflows                                                                                                                             |
+| Dependency review   | Every PR                            | Blocks new dependencies with known vulnerabilities or GPL/AGPL licenses                                                                                                             |
+| PR labeler          | Every PR                            | Adds `area:*` labels from the changed paths                                                                                                                                         |
 
 ## Commits and PR titles
 
@@ -54,16 +54,16 @@ Use [Conventional Commits](https://www.conventionalcommits.org/). PRs are squash
 | `fix`                                                               | Bug fix                                | patch                  |
 | `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`, `style` | Everything else                        | none                   |
 
-Add `!` (e.g. `feat!:`) or a `BREAKING CHANGE:` footer when old saves stop loading. Scope is optional; `neontrace` is a good default.
+Add `!` (e.g. `feat!:`) or a `BREAKING CHANGE:` footer when old saves stop loading. Scope is optional; `pentrace` is a good default.
 
 ## Releases
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please):
 
-1. Merging to `main` keeps a release PR open titled `chore(main): release neontrace X.Y.Z`. It bumps the version in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` and updates `CHANGELOG.md`.
-2. Merging that PR tags `neontrace-vX.Y.Z`, creates the GitHub Release with the generated notes, and builds the Windows, macOS and Linux installers onto it.
+1. Merging to `main` keeps a release PR open titled `chore(main): release pentrace X.Y.Z`. It bumps the version in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` and updates `CHANGELOG.md`.
+2. Merging that PR tags `pentrace-vX.Y.Z`, creates the GitHub Release with the generated notes, and builds the Windows, macOS and Linux installers onto it.
 
-Manual fallback: push a `neontrace-v*` tag and the same workflow creates the release (notes from GitHub) and attaches installers. To rebuild installers for an existing tag, run **NEONTRACE release** from the Actions tab with that tag.
+Manual fallback: push a `pentrace-v*` tag and the same workflow creates the release (notes from GitHub) and attaches installers. To rebuild installers for an existing tag, run **PenTrace release** from the Actions tab with that tag.
 
 ## Where things live
 

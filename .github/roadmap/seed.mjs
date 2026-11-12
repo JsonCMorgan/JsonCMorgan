@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Creates the NEONTRACE roadmap milestones and issues from roadmap.json.
+// Creates the PenTrace roadmap milestones and issues from roadmap.json.
 // Idempotent: existing milestones and issues (matched by exact title) are skipped.
 //
 //   node .github/roadmap/seed.mjs --dry-run

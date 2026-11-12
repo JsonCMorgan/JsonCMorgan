@@ -1,8 +1,8 @@
 <!--
 PR title must be a conventional commit, e.g.
-  feat(neontrace): add proxy overload layer
-  fix(neontrace): trace meter no longer resets on dc
-  content(neontrace): add "Cold Storage" crypto contract
+  feat(pentrace): add proxy overload layer
+  fix(pentrace): trace meter no longer resets on dc
+  content(pentrace): add "Cold Storage" crypto contract
 It becomes the squash commit and drives the version bump and changelog.
 -->
 
@@ -20,8 +20,8 @@ It becomes the squash commit and drives the version bump and changelog.
 
 ## Checklist
 
-- [ ] `npm run check` passes in `neontrace/` (lint, format, typecheck, tests with coverage)
-- [ ] New engine logic has unit tests in `neontrace/tests/`
+- [ ] `npm run check` passes in `pentrace/` (lint, format, typecheck, tests with coverage)
+- [ ] New engine logic has unit tests in `pentrace/tests/`
 - [ ] New techniques have an Index entry (Real World, In Game, Detection & Defense)
 - [ ] Nothing touches a real network; all "hacking" stays simulated
 - [ ] README / CONTRIBUTING updated if commands, setup or the release flow changed

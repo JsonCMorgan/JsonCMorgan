@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /neontrace
+    directory: /pentrace
     schedule:
       interval: weekly
       day: monday
@@ -23,7 +23,7 @@ updates:
         update-types: [version-update:semver-major, version-update:semver-minor]
 
   - package-ecosystem: cargo
-    directory: /neontrace/src-tauri
+    directory: /pentrace/src-tauri
     schedule:
       interval: weekly
       day: monday

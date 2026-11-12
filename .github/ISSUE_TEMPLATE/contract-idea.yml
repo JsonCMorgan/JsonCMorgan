@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Contracts are plain data in `neontrace/src/engine/content/`. Keep everything simulated and original;
+        Contracts are plain data in `pentrace/src/engine/content/`. Keep everything simulated and original;
         public curricula (OverTheWire, picoCTF, TryHackMe topics) are fine as inspiration.
   - type: input
     id: title
