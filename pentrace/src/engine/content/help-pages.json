@@ -1,0 +1,94 @@
+{
+  "pages": [
+    {
+      "n": 1,
+      "title": "Orientation",
+      "indexIds": ["the-trace", "port-scanning"],
+      "lines": [
+        "PenTrace is a breach sim: recon hosts, crack services, finish contracts, jack out before SOC traces you.",
+        "help [n] pages unlock in the same order Vex teaches. help with no number shows the index.",
+        "hint gives the next safe command. GUIDE (top bar) mirrors training steps.",
+        "index opens concept cards tied to real tools (port scan, SSH abuse, firewalls)."
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Files & shell",
+      "indexIds": ["log-analysis"],
+      "lines": [
+        "ls  cd  pwd  cat  head  tail  grep  sort  uniq  wc",
+        "rm removes files. Glob patterns work where the parser supports them (see help 8).",
+        "TAB completes filenames. History: ↑ and ↓.",
+        "Pipes: cmd | cmd  (e.g. cat notes.txt | grep scope)."
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Network & pivot",
+      "indexIds": ["port-scanning", "privilege-escalation"],
+      "lines": [
+        "scan from a host you own to discover neighbors.",
+        "nmap -sV <ip> fingerprints open services (required for edge survey jobs).",
+        "connect <ip> attaches your shell to a host. dc disconnects.",
+        "scp <remote-path> pulls files to ~/downloads on your rig when you have access."
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Breach tools",
+      "indexIds": ["ssh-credential-attacks", "web-enumeration"],
+      "lines": [
+        "sshbrute <ip>  — SSH password spray (noisy; watch TRACE).",
+        "webscan <ip>   — HTTP weakness check on port 80.",
+        "ftploot <ip>   — shop tool; anonymous FTP (quieter).",
+        "getroot <ip>   — privilege escalation after enough ports are open.",
+        "man <tool> for usage. tools lists what you own."
+      ]
+    },
+    {
+      "n": 5,
+      "title": "Firewalls",
+      "indexIds": ["firewall-rules", "ftp-anonymous"],
+      "lines": [
+        "fwrules <ip> shows iptables-style rules (adds a little heat).",
+        "Rules match top-down. Look for ACCEPT lines that name a trusted source.",
+        "fwbypass <ip> --src <pivot-ip> spoofs that source after you identify it.",
+        "You cannot crack through a live firewall until bypass succeeds."
+      ]
+    },
+    {
+      "n": 6,
+      "title": "Jobs & mail",
+      "indexIds": ["log-analysis", "covering-tracks"],
+      "lines": [
+        "jobs lists the contract board. mail reads fixer briefings.",
+        "submit <job-id> <answer> when the objective needs an explicit answer (e.g. c3 IOC IP).",
+        "Recon jobs complete when objectives are met in the world (c1: all hosts fingerprinted).",
+        "jackout ends the run (stealth bonus if trace stayed low)."
+      ]
+    },
+    {
+      "n": 7,
+      "title": "Meta progression",
+      "indexIds": ["the-trace", "weak-default-creds"],
+      "lines": [
+        "contacts shows fixer Standing (this op) and Trust Floor (meta).",
+        "perks spends Operator Rank points (timedrive, ram_overclock, …).",
+        "shop / buy <item> — permanent rig upgrades.",
+        "hints [off|nudge|training|auto] — tutorial nudges (default auto: Nudge until Rank 5)."
+      ]
+    },
+    {
+      "n": 8,
+      "title": "PenTrace terminal rules",
+      "indexIds": ["covering-tracks", "log-analysis"],
+      "lines": [
+        "Fiction contract: this is a game shell, not bash — but rules are consistent everywhere.",
+        "Supported: pipes (|), quoted arguments, common file verbs, game breach commands.",
+        "Wildcards: rm /var/log/* style globs; grep uses patterns you type literally.",
+        "Not supported: recursive rm flags, curl/wget, arbitrary scripting (Workshop later).",
+        "When unsure: man <tool>, index, or help [n]."
+      ]
+    }
+  ]
+}

@@ -32,7 +32,14 @@ import { advanceClock } from './engine/clock';
 import { GameTerminal } from './ui/terminal';
 import { TUTORIAL_STEPS } from './engine/tutorial';
 import { TRAINING_INTRUDER_IP, TRAINING_VAULT_IP } from './engine/network';
-import { migrateLegacyStorage, PREFS_KEY, SAVE_KEY } from './engine/storage';
+import {
+  DEFAULT_PREFS,
+  effectiveHintLevel,
+  migrateLegacyStorage,
+  PREFS_KEY,
+  SAVE_KEY,
+  type PenTracePrefs,
+} from './engine/storage';
 
 try {
   migrateLegacyStorage(localStorage);
@@ -54,18 +61,67 @@ function loadSave(): SaveData | null {
     return null;
   }
 }
-const prefs: { tutorial: boolean } = { tutorial: true, ...JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') };
+const prefs: PenTracePrefs = { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') };
 const savePrefs = () => localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
 
 const hadSave = !!loadSave();
 const seedParam = params.get('seed');
 let game = new Game(loadSave(), seedParam ? Number(seedParam) : undefined, { tutorial: !demoMode });
+if (game.profile.hintLevel === undefined) game.profile.hintLevel = prefs.hintLevel ?? 'auto';
+else prefs.hintLevel = game.profile.hintLevel;
 const synth = new Synth();
 synth.enabled = game.profile.sound;
 
 let focusIp: string | null = game.world.gatewayIp;
 let modal: { kind: 'index' | 'shop' | 'jobs' | 'mail' | 'contacts' | 'perks'; arg?: string } | null = null;
 let shownCredits = game.profile.credits;
+
+let tutorialStuckSec = 0;
+let tutorialStuckStep = -1;
+let tutorialNudgeShown = false;
+
+function resetTutorialStuck() {
+  const t = game.run.tutorial;
+  if (!t) {
+    tutorialStuckSec = 0;
+    tutorialStuckStep = -1;
+    tutorialNudgeShown = false;
+    return;
+  }
+  if (t.step !== tutorialStuckStep) {
+    tutorialStuckStep = t.step;
+    tutorialStuckSec = 0;
+    tutorialNudgeShown = false;
+  }
+}
+
+function applyHintNudges() {
+  const eff = effectiveHintLevel(game.profile.hintLevel ?? prefs.hintLevel, game.profile.operatorRank);
+  $('#btn-index').classList.toggle('nudge-pulse', false);
+  $('#guide-btn').classList.toggle('nudge-pulse', false);
+  $('#btn-index').classList.toggle('off', false);
+  if (eff === 'off') return;
+  const t = game.run.tutorial;
+  if (!t) return;
+  if (tutorialStuckSec < 90) return;
+  const step = TUTORIAL_STEPS[t.step];
+  const wantIndex = ['help', 'index', 'man', 'fwrules', 'firewall', 'mail', 'jobs', 'shop'].some(
+    (x) => step.id === x || step.id.includes(x),
+  );
+  if (wantIndex) $('#btn-index').classList.add('nudge-pulse');
+  else $('#guide-btn').classList.add('nudge-pulse');
+  if (!tutorialNudgeShown && eff === 'training') {
+    tutorialNudgeShown = true;
+    const extra =
+      step.id === 'help'
+        ? 'Type help 5 for firewalls when you get there.'
+        : `Still on: ${step.title}. hint shows the next command.`;
+    toast('hint', 'VEX NUDGE', extra);
+  } else if (!tutorialNudgeShown) {
+    tutorialNudgeShown = true;
+    toast('hint', 'STUCK?', 'Open INDEX or GUIDE — or type hint.');
+  }
+}
 
 function persist() {
   localStorage.setItem(SAVE_KEY, JSON.stringify(game.serialize()));
@@ -80,8 +136,14 @@ const term = new GameTerminal($('#terminal'), {
 });
 
 function runCommand(line: string) {
+  const beforeStep = game.run.tutorial?.step;
   const ipMatch = line.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g);
   const out = game.exec(line);
+  if (line.trim().startsWith('hints')) {
+    prefs.hintLevel = game.profile.hintLevel ?? prefs.hintLevel;
+    savePrefs();
+  }
+  if (game.run.tutorial?.step !== beforeStep) resetTutorialStuck();
   if (ipMatch) {
     const known = ipMatch.map((ip) => findHost(game.world, ip)).find((h) => h && h.discovered && h.role !== 'home');
     if (known && !line.includes('--src')) focusIp = known.ip;
@@ -206,6 +268,7 @@ function renderAll() {
   $('#guide-btn').classList.toggle('off', !prefs.tutorial);
   $('#trace').classList.toggle('danger', game.run.heat >= 75);
   $('#app').classList.toggle('hot', game.run.heat >= 75);
+  applyHintNudges();
   if (modal) renderModal();
 }
 
@@ -604,6 +667,10 @@ function frame(now: number) {
   last = now;
   acc += dt;
   saveAcc += dt;
+  if (game.run.tutorial) {
+    resetTutorialStuck();
+    tutorialStuckSec += dt;
+  }
   renderCredits(dt);
   if (acc > 0.1) {
     acc = 0;

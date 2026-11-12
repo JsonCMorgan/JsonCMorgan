@@ -32,7 +32,10 @@ import {
   totalXpForRank,
   xpProgress,
 } from './progression';
+import { formatHelpIndex, formatHelpPage } from './content/help';
 import { findHost, generateTrainingWorld, generateWorld, Host, openPortCount, scanLinks, TRAINING_INTRUDER_IP, World } from './network';
+import type { HintPref } from './storage';
+import { effectiveHintLevel } from './storage';
 import { parseLine, parseOpts, ParseError } from './parser';
 import { defaultRegistry, ToolContext, ToolDef, ToolRegistry } from './tools';
 import { StepCtx, TUTORIAL_PAY_FIRST, TUTORIAL_PAY_REPLAY, TUTORIAL_STEPS } from './tutorial';
@@ -75,6 +78,7 @@ export interface Profile extends ProgressionProfile {
   nextSeed: number;
   sound: boolean;
   tutorialDone: boolean;
+  hintLevel?: HintPref;
 }
 
 export interface RunState {
@@ -132,6 +136,7 @@ export function newProfile(seed: number): Profile {
   nextSeed: seed,
   sound: true,
   tutorialDone: false,
+  hintLevel: 'auto',
   ...defaultProgression(SAVE_VERSION),
 };
 }
@@ -152,6 +157,7 @@ export class Game {
     if (save && save.profile && save.run?.world) {
       this.profile = save.profile;
       this.profile.tutorialDone ??= this.profile.totalEarned > 0 || this.profile.runs > 1;
+      this.profile.hintLevel ??= 'auto';
       if ((this.profile.version ?? 1) < SAVE_VERSION) migrateProfile(this.profile as unknown as Record<string, unknown>, this.profile.tutorialDone);
       this.profile.version = SAVE_VERSION;
       this.run = save.run;
@@ -214,6 +220,8 @@ export class Game {
         `New engagement: ${world.org}. Contracts are scoped. Stay inside authorized targets.`,
         'Type jobs for the board, contacts for broker Standing, perks for Operator Rank unlocks.',
         'Every noisy tool feeds SOC correlation. Watch TRACE.',
+        'Cheatsheet: scan · nmap -sV <gw> · fwrules · fwbypass · sshbrute · getroot · scp · help 5',
+        'Stuck without Google: help 1–8, hint, index, GUIDE checklist.',
       ]);
       for (const def of CONTRACTS) {
         if (this.run.contracts[def.id] === 'active') this.mailContract(def.id);
@@ -851,17 +859,33 @@ export class Game {
   // ---------------------------------------------------------------- commands
   private buildCommands(): Record<string, Cmd> {
     const cmds: Record<string, Cmd> = {
-      help: () => [
-        c.bold(c.cyan('PENTRACE // command reference')),
-        c.magenta(' FILES   ') + 'ls  cd  pwd  cat  rm  mv  grep  head  tail  sort  uniq  wc',
-        c.magenta(' NET     ') + 'connect <host>  dc  scan  scp <path>',
-        c.magenta(' BREACH  ') + 'nmap  fwrules  fwbypass  sshbrute  webscan  getroot  ps  kill',
-        c.magenta(' JOBS    ') + 'mail  jobs  submit <job> <answer>  jackout',
-        c.magenta(' META    ') + 'contacts  perks  perks pick <id>  perks respec',
-        c.magenta(' RIG     ') + 'shop  buy <item>  index [entry]  tools  man <tool>  workshop  status',
-        c.magenta(' TRAIN   ') + `tutorial  ${c.dim('(replay the training sim)')}  tutorial skip`,
-        c.magenta(' HELP    ') + `hint  clear   ${c.dim('(TAB completes, ↑↓ history, pipes with |)')}`,
-      ],
+      help: (args) => {
+        if (!args.length) return formatHelpIndex();
+        const n = Number(args[0]);
+        if (!Number.isFinite(n)) err('usage: help [page]   try: help 5');
+        return formatHelpPage(n);
+      },
+      hints: (args) => {
+        const usage = 'usage: hints [off|nudge|training|auto]';
+        const choices: HintPref[] = ['off', 'nudge', 'training', 'auto'];
+        if (!args.length) {
+          const eff = effectiveHintLevel(this.profile.hintLevel, this.profile.operatorRank);
+          return [
+            c.bold(c.cyan('HINT LEVEL')),
+            `  stored: ${this.profile.hintLevel ?? 'auto'}   effective: ${eff}`,
+            c.dim('  off — no UI nudges'),
+            c.dim('  nudge — pulse INDEX/GUIDE if stuck in training (>90s)'),
+            c.dim('  training — nudge plus extra step reminders'),
+            c.dim('  auto — Nudge until Operator Rank 5, then off'),
+            usage,
+          ];
+        }
+        const next = args[0] as HintPref;
+        if (!choices.includes(next)) err(usage);
+        this.profile.hintLevel = next;
+        const eff = effectiveHintLevel(next, this.profile.operatorRank);
+        return [c.green(`hint level set to ${next} (effective: ${eff})`)];
+      },
       hint: () => {
         const h = this.nextHint(true);
         return [c.yellow('► ') + h.text + (h.cmd ? '   ' + c.cyan(h.cmd) : '')];

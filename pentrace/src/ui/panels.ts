@@ -1,3 +1,4 @@
+import { activeJobChecklist } from '../engine/contract-checklist';
 import { CONTRACTS } from '../engine/content/contracts';
 import { INDEX_BY_ID, INDEX_ENTRIES } from '../engine/content/index-entries';
 import { SHOP_ITEMS } from '../engine/content/shop';
@@ -17,6 +18,16 @@ import {
 
 export const esc = (s: string) =>
   s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
+
+function checklistHtml(items: { label: string; done: boolean }[]): string {
+  if (!items.length) return '';
+  return `<div class="job-checklist">${items
+    .map(
+      (i) =>
+        `<div class="check-row ${i.done ? 'done' : ''}"><span class="check-box" aria-hidden="true">${i.done ? '✓' : '○'}</span><span>${esc(i.label)}</span></div>`,
+    )
+    .join('')}</div>`;
+}
 
 export function traceHtml(g: Game): string {
   const h = g.run.heat;
@@ -70,13 +81,14 @@ export function guideHtml(g: Game, tutorial: boolean): string {
     <div class="meter train-meter"><div class="fill" style="width:${pct}%"></div></div>
     <div class="guide-text train-title">${esc(h.text)}</div>
     ${h.cmd ? `<div class="train-type dim">type this in the terminal:</div><button class="chip" data-cmd="${esc(h.cmd)}">▸ ${esc(h.cmd)}</button>` : ''}
+    ${checklistHtml(activeJobChecklist(g) ?? [])}
     <div class="dim train-foot">Vex's instructions are in the terminal. The trace cannot burn you in here.${g.profile.tutorialDone ? ' Replay? tutorial skip leaves.' : ''}</div>`;
   }
   const job = CONTRACTS.find((c) => g.run.contracts[c.id] === 'active');
   return `
     <div class="panel-title">NEXT STEP <span class="dim">// ${tutorial ? 'guide on' : 'guide off'}</span></div>
     ${tutorial ? `<div class="guide-text">${esc(h.text)}</div>${h.cmd ? `<button class="chip" data-cmd="${esc(h.cmd)}">▸ ${esc(h.cmd)}</button>` : ''}` : '<div class="dim">Type hint if you get stuck.</div>'}
-    ${job ? `<div class="job-mini"><span class="tag">${job.id.toUpperCase()} · ${esc(job.type)}</span><b>${esc(job.title)}</b><span class="pay">${job.payout}¢</span><div class="dim">${esc(job.objective(g.world))}</div></div>` : ''}`;
+    ${job ? `<div class="job-mini"><span class="tag">${job.id.toUpperCase()} · ${esc(job.type)}</span><b>${esc(job.title)}</b><span class="pay">${job.payout}¢</span><div class="dim">${esc(job.objective(g.world))}</div>${checklistHtml(activeJobChecklist(g) ?? [])}</div>` : ''}`;
 }
 
 export function targetHtml(g: Game, focus: Host | null): string {
@@ -223,6 +235,8 @@ export function jobsModalHtml(g: Game): string {
     ? `<div class="job-card ${t.paid ? 'done' : 'active'}"><div class="job-top"><span class="tag">DRILL · Tutorial</span><span class="pay">${g.profile.tutorialDone ? TUTORIAL_PAY_REPLAY : TUTORIAL_PAY_FIRST}¢</span></div>
       <div class="job-title">Training Sim</div><div class="dim">Follow Vex through the sim, step by step.</div><div class="job-state">${t.paid ? 'PAID' : 'ACTIVE'}</div></div>`
     : '';
+  const active = CONTRACTS.find((c) => !t && g.run.contracts[c.id] === 'active');
+  const checklist = active ? checklistHtml(activeJobChecklist(g) ?? []) : '';
   const cards = drill + CONTRACTS.map((c) => {
     if (t) {
       return `<div class="job-card locked"><div class="job-top"><span class="tag">${c.id.toUpperCase()} · ${esc(c.type)}</span><span class="pay">${c.payout}¢</span></div>
@@ -235,7 +249,9 @@ export function jobsModalHtml(g: Game): string {
       <div class="dim">${st === 'locked' ? 'Unlocks after the previous job.' : esc(c.objective(g.world))}</div>
       <div class="job-state">${st.toUpperCase()}</div></div>`;
   }).join('');
-  return `<div class="modal-head"><h3>CONTRACT BOARD <span class="dim">${esc(g.world.org)}</span></h3><button class="x" data-close>✕</button></div><div class="jobs-grid ${t ? 'four' : ''}">${cards}</div>`;
+  return `<div class="modal-head"><h3>CONTRACT BOARD <span class="dim">${esc(g.world.org)}</span></h3><button class="x" data-close>✕</button></div>
+    ${checklist ? `<div class="jobs-checklist">${checklist}</div>` : ''}
+    <div class="jobs-grid ${t ? 'four' : ''}">${cards}</div>`;
 }
 
 export function contactsModalHtml(g: Game): string {

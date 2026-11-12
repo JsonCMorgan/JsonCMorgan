@@ -1,5 +1,36 @@
 # Contributing to PenTrace
 
+## 15-minute beginner smoke (accessibility)
+
+Run this after changes to training, help, contracts, or the GUIDE panel. Goal: no Google, no softlocks, `c1` complete on a fresh profile.
+
+### Setup
+
+1. Open the game with a fresh save: append `?fresh=1` to the URL (or clear `pentrace-save-v1` in devtools).
+2. Click **JACK IN** — you must land in the **training sim**, not live Relay scope.
+3. Leave hint policy at default (`hints auto` → Nudge until Operator Rank 5).
+
+### Checklist
+
+| Min | Step | Pass if |
+| --- | --- | --- |
+| 0 | Training opens | TRAINING SIM in GUIDE; trace cannot reach 100% |
+| 2 | `help` then `help 5` | Firewall page mentions `fwrules` / `fwbypass` |
+| 8 | Finish Vex steps through drill | GUIDE checklist rows tick off; `submit drill` pays |
+| 10 | Graduate | Relay mail; `jobs` shows `c1` active (not locked behind mystery tool) |
+| 12 | Edge Survey | `hint` only — fingerprint every host; `c1` auto-completes |
+| 15 | Stop | No stuck state; `jackout` or continue to `c2` optional |
+
+### Regression commands
+
+```bash
+cd pentrace && npm test
+```
+
+Focus: `tests/tutorial.test.ts`, `tests/help-pages.test.ts`, `tests/contracts-gates.test.ts`, `tests/breach.test.ts`.
+
+Design context: Project store `docs/hacknet-criticism-accessibility.md`.
+
 ## Local mission writer (Ollama)
 
 Procedural mission **copy** can be drafted with a local LLM. Mechanics (network layout, kill chains) stay deterministic; Ollama only proposes mail and fiction.

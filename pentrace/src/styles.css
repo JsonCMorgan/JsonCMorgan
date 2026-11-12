@@ -167,6 +167,17 @@ button {
   border-color: rgba(125, 111, 163, 0.4);
   text-decoration: line-through;
 }
+.topnav button.nudge-pulse {
+  animation: navnudge 1.2s ease-in-out infinite;
+  box-shadow: 0 0 18px rgba(255, 43, 214, 0.55);
+  border-color: var(--magenta);
+  color: #fff;
+}
+@keyframes navnudge {
+  50% {
+    box-shadow: 0 0 26px rgba(0, 240, 255, 0.75);
+  }
+}
 .badge-n:not(:empty) {
   position: absolute;
   top: -7px;
@@ -511,6 +522,38 @@ button {
 .pay {
   color: var(--yellow);
   font-weight: 700;
+}
+.job-checklist {
+  margin-top: 10px;
+  font-size: 11px;
+  display: grid;
+  gap: 4px;
+}
+.check-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: var(--text);
+  opacity: 0.92;
+}
+.check-row.done {
+  color: var(--dim);
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+.check-box {
+  flex: 0 0 auto;
+  color: var(--cyan);
+  font-weight: 700;
+}
+.check-row.done .check-box {
+  color: var(--green);
+}
+.jobs-checklist {
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 /* terminal */
