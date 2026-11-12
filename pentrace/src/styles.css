@@ -1618,3 +1618,61 @@ button {
   font-size: 12px;
   letter-spacing: 0.08em;
 }
+
+.rank-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+  font-family: var(--display);
+  font-size: 11px;
+  color: var(--cyan);
+  letter-spacing: 0.08em;
+}
+.rank-bar {
+  display: inline-block;
+  width: 48px;
+  height: 4px;
+  background: rgba(0, 255, 255, 0.15);
+  vertical-align: middle;
+}
+.rank-bar i {
+  display: block;
+  height: 100%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+}
+.fixer-icon {
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--magenta);
+  margin-right: 8px;
+}
+.contacts-grid,
+.perks-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+.contact-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.contact-card.pulse {
+  border-color: var(--green);
+  box-shadow: 0 0 12px rgba(57, 255, 20, 0.2);
+}
+.contact-card.teaser,
+.contact-card.locked {
+  opacity: 0.55;
+}
+.shop-card.gated {
+  opacity: 0.7;
+}
+.shop-card .gate {
+  color: var(--yellow);
+  font-size: 11px;
+}

@@ -1,8 +1,37 @@
 import { c, pad, stripAnsi } from './ansi';
 import { CONTRACT_BY_ID, CONTRACTS, ContractId } from './content/contracts';
+import { FIXER_BY_ID } from './progression';
 import { INDEX_BY_ID, INDEX_ENTRIES } from './content/index-entries';
 import { SHOP_BY_ID, SHOP_ITEMS } from './content/shop';
 import type { GameEvent } from './events';
+import {
+  FIXERS,
+  MAIL_TEMPLATES,
+  PERK_DEFS,
+  PerkId,
+  ProgressionProfile,
+  SAVE_VERSION,
+  BURN_RUN_STANDING_PENALTY,
+  adjustRunStanding,
+  clearPerks,
+  contactVisibility,
+  defaultProgression,
+  effectiveStanding,
+  grantOperatorXp,
+  initRunStanding,
+  migrateProfile,
+  overclockHeatMul,
+  perkPointsAvailable,
+  raiseTrustFloor,
+  ramOverclockMb,
+  relaySetComplete,
+  respecCreditCost,
+  shopItemGated,
+  standingLabel,
+  timedriveDurationMul,
+  totalXpForRank,
+  xpProgress,
+} from './progression';
 import { findHost, generateTrainingWorld, generateWorld, Host, openPortCount, scanLinks, TRAINING_INTRUDER_IP, World } from './network';
 import { parseLine, parseOpts, ParseError } from './parser';
 import { defaultRegistry, ToolContext, ToolDef, ToolRegistry } from './tools';
@@ -11,7 +40,7 @@ import { FsError, resolvePath, VFS } from './vfs';
 
 export const BASE_RAM = 512;
 export const HEAT_DECAY_PER_SEC = 0.8;
-export const SAVE_VERSION = 1;
+export { SAVE_VERSION };
 
 export interface Proc {
   pid: number;
@@ -35,8 +64,7 @@ export type ContractStatus = 'locked' | 'active' | 'done';
 
 const EVIDENCE_LOG = '/var/log/auth.log';
 
-export interface Profile {
-  version: number;
+export interface Profile extends ProgressionProfile {
   credits: number;
   totalEarned: number;
   owned: string[];
@@ -65,6 +93,10 @@ export interface RunState {
   traced: boolean;
   elapsed: number;
   tutorial?: { step: number; paid: boolean };
+  /** Operator XP granted on trace (consolation). */
+  _burnXp?: number;
+  /** Per-broker standing this op (starts at Trust Floor on jack-in). */
+  runStanding: Partial<Record<import('./progression').FixerId, number>>;
 }
 
 export interface SaveData {
@@ -89,18 +121,19 @@ const err = (msg: string): never => {
 
 export function newProfile(seed: number): Profile {
   return {
-    version: SAVE_VERSION,
-    credits: 0,
-    totalEarned: 0,
-    owned: [],
-    index: {},
-    runs: 0,
-    traced: 0,
-    extracted: 0,
-    nextSeed: seed,
-    sound: true,
-    tutorialDone: false,
-  };
+  version: SAVE_VERSION,
+  credits: 0,
+  totalEarned: 0,
+  owned: [],
+  index: {},
+  runs: 0,
+  traced: 0,
+  extracted: 0,
+  nextSeed: seed,
+  sound: true,
+  tutorialDone: false,
+  ...defaultProgression(SAVE_VERSION),
+};
 }
 
 export class Game {
@@ -116,11 +149,14 @@ export class Game {
   constructor(save?: SaveData | null, seed = Date.now() % 1_000_000, opts: GameOptions = {}) {
     this.registry = defaultRegistry();
     this.commands = this.buildCommands();
-    if (save && save.profile?.version === SAVE_VERSION && save.run?.world) {
+    if (save && save.profile && save.run?.world) {
       this.profile = save.profile;
       this.profile.tutorialDone ??= this.profile.totalEarned > 0 || this.profile.runs > 1;
+      if ((this.profile.version ?? 1) < SAVE_VERSION) migrateProfile(this.profile as unknown as Record<string, unknown>, this.profile.tutorialDone);
+      this.profile.version = SAVE_VERSION;
       this.run = save.run;
       this.run.procs = [];
+      this.run.runStanding ??= initRunStanding(this.profile);
       this.stash = save.stash ?? null;
       if (!this.profile.tutorialDone && !this.run.tutorial && opts.tutorial !== false) this.startTutorial();
     } else {
@@ -149,10 +185,11 @@ export class Game {
   }
 
   // ---------------------------------------------------------------- run lifecycle
-  startRun() {
+  startRun(opts: { afterJackout?: boolean } = {}) {
     const seed = this.profile.nextSeed;
     this.profile.nextSeed = (seed * 48271 + 11) % 2147483647;
     this.profile.runs += 1;
+  if (opts.afterJackout) this.profile.freeRespecThisRun = true;
     const world = generateWorld(seed);
     this.run = {
       world,
@@ -162,33 +199,65 @@ export class Game {
       heat: 0,
       flagged: false,
       passed50: false,
-      contracts: { c1: 'active', c2: 'locked', c3: 'locked' },
+      contracts: this.seedContracts(),
       procs: [],
       nextPid: 1337,
       earned: 0,
       mails: [],
       traced: false,
       elapsed: 0,
+      runStanding: initRunStanding(this.profile),
     };
-    const first = this.profile.runs === 1;
-    this.addMail('Vex', first ? 'Welcome to the grid, Ghost' : `Op #${this.profile.runs}: new target`, [
-      first
-        ? 'Ghost. Vex here. I broker contracts, you breach networks, we both get paid.'
-        : `Back on the grid. Your kit and credits carried over. New target: ${world.org}.`,
-      'Your rig RAM is limited, and every noisy move raises the TRACE meter.',
-      'Hit 100% and your identity burns: the op ends, but you keep banked credits and tools.',
-      'Stuck? Type hint. Reference? Type index. Jobs? Type jobs.',
-    ]);
-    this.mailContract('c1');
+    if (this.profile.relayUnlocked) {
+      const relay = FIXER_BY_ID.relay;
+      this.addMail(relay.name, `OP #${this.profile.runs} // ${world.org}`, [
+        `New engagement: ${world.org}. Contracts are scoped. Stay inside authorized targets.`,
+        'Type jobs for the board, contacts for broker Standing, perks for Operator Rank unlocks.',
+        'Every noisy tool feeds SOC correlation. Watch TRACE.',
+      ]);
+      for (const def of CONTRACTS) {
+        if (this.run.contracts[def.id] === 'active') this.mailContract(def.id);
+      }
+    } else {
+      const first = this.profile.runs === 1;
+      this.addMail('Vex', first ? 'TRAINING // pre-live' : `Op #${this.profile.runs}`, [
+        first
+          ? 'Ghost. Vex. Finish the training sim before anyone puts you on live scope.'
+          : `Back in the sim pipeline. Complete training before Relay will touch you.`,
+        'Stuck? hint. Reference? index.',
+      ]);
+    }
     this.emit({ type: 'newRun' });
+  }
+
+  private seedContracts(): Record<ContractId, ContractStatus> {
+    if (!this.profile.relayUnlocked) return { c1: 'active', c2: 'locked', c3: 'locked' };
+    return { c1: 'active', c2: 'locked', c3: 'locked' };
   }
 
   private addMail(from: string, subject: string, body: string[]) {
     this.run.mails.push({ from, subject, body, read: false });
   }
   private mailContract(id: ContractId) {
-    const m = CONTRACT_BY_ID[id].mail(this.run.world);
-    this.addMail('Vex', m.subject, m.body);
+    const def = CONTRACT_BY_ID[id];
+    const m = def.mail(this.run.world);
+    this.addMail(FIXER_BY_ID[def.fixerId].name, m.subject, m.body);
+  }
+
+  private inBreach(): boolean {
+    if (this.run.connected) {
+      const h = findHost(this.world, this.run.connected);
+      if (h && h.role !== 'home') return true;
+    }
+    return this.run.procs.some((p) => {
+      const h = findHost(this.world, p.target);
+      return h && h.role !== 'home';
+    });
+  }
+
+  private breachCrackerCount(): number {
+    const breachTools = new Set(['sshbrute', 'webscan', 'ftploot', 'getroot', 'fwbypass']);
+    return this.run.procs.filter((p) => breachTools.has(p.toolId)).length;
   }
 
   // ---------------------------------------------------------------- tutorial
@@ -238,6 +307,7 @@ export class Game {
       traced: false,
       elapsed: 0,
       tutorial: { step: 0, paid: false },
+      runStanding: {},
     };
     this.tabUsed = false;
     this.addMail('Vex', 'TRAINING // Welcome to the sim', [
@@ -297,6 +367,30 @@ export class Game {
   finishTutorial(skipped = false): string[] {
     const firstTime = !this.profile.tutorialDone;
     this.profile.tutorialDone = true;
+    const out: string[] = [];
+    if (firstTime && !skipped) {
+      this.profile.vexGraduated = true;
+      this.profile.metFixers = Array.from(new Set([...this.profile.metFixers, 'vex', 'relay']));
+      this.profile.gigProgress.relay = { setId: 0, completed: [] };
+      this.profile.relayUnlocked = true;
+      if (this.profile.operatorRank < 2) {
+        this.profile.operatorRank = 2;
+        this.profile.operatorXp = totalXpForRank(2);
+      }
+      this.profile.pendingPerkPick = perkPointsAvailable(this.profile.operatorRank, this.profile.perkRanks) > 0;
+      const vtx = MAIL_TEMPLATES.vexGraduation;
+      this.addMail('Vex', vtx.subject, vtx.body);
+      const rtx = MAIL_TEMPLATES.vexRelayIntro;
+      this.addMail(FIXER_BY_ID.relay.name, rtx.subject, rtx.body);
+      out.push(
+        c.cyan('  VEX ▸ ') + 'You are not my student anymore. Relay brokers your contracts now.',
+        c.yellow('  ▸ Operator Rank 2. Pick a perk: perks pick timedrive or perks pick ram_overclock'),
+      );
+    } else if (firstTime && skipped) {
+      this.profile.vexGraduated = true;
+      this.profile.relayUnlocked = true;
+      this.profile.metFixers = Array.from(new Set([...this.profile.metFixers, 'vex', 'relay']));
+    }
     const stash = this.stash;
     this.stash = null;
     if (stash) {
@@ -304,15 +398,13 @@ export class Game {
       this.run.procs = [];
       this.emit({ type: 'newRun' });
     } else this.startRun();
-    this.emit({ type: 'toast', kind: 'success', title: skipped ? 'TRAINING SKIPPED' : 'TRAINING COMPLETE', body: 'Real contracts unlocked.' });
+    this.emit({ type: 'toast', kind: 'success', title: skipped ? 'TRAINING SKIPPED' : 'TRAINING COMPLETE', body: 'Relay unlocked.' });
     if (!skipped) this.emit({ type: 'fx', fx: 'granted' });
     return [
       '',
-      c.green(c.bold(skipped ? '  ▸ TRAINING SKIPPED.' : '  ▸ TRAINING COMPLETE. You are cleared for real work.')),
-      ...(firstTime && !skipped
-        ? [c.cyan('  VEX ▸ ') + 'Next up, the Workshop: once you have a few real jobs behind you, you build your own tools.']
-        : []),
-      c.cyan(`  ${stash ? 'Back to your op' : 'New op loaded'}: ${this.world.org}. Type mail for your first real job.`),
+      c.green(c.bold(skipped ? '  ▸ TRAINING SKIPPED.' : '  ▸ TRAINING COMPLETE. You are cleared for live scope.')),
+      ...out,
+      c.cyan(`  ${stash ? 'Back to your op' : 'New op loaded'}: ${this.world.org}. Type mail or contacts.`),
     ];
   }
 
@@ -326,7 +418,8 @@ export class Game {
     return this.run.connected ? findHost(this.world, this.run.connected) ?? null : null;
   }
   get maxRam(): number {
-    return BASE_RAM + (this.owns('ram-512') ? 512 : 0);
+    const base = BASE_RAM + (this.owns('ram-512') ? 512 : 0);
+    return base + ramOverclockMb(this.profile.perkRanks, this.inBreach());
   }
   get usedRam(): number {
     return this.run.procs.reduce((s, p) => s + p.ram, 0);
@@ -362,8 +455,33 @@ export class Game {
     this.run.traced = true;
     this.run.procs = [];
     this.profile.traced += 1;
+    const would = CONTRACTS.filter((d) => this.run.contracts[d.id] === 'active' || this.run.contracts[d.id] === 'done').reduce(
+      (s, d) => s + d.operatorXp,
+      0,
+    );
+    const consolation = Math.round(would * 0.25);
+    if (consolation > 0) {
+      const { gained, rankUps } = grantOperatorXp(this.profile, consolation);
+      this.run._burnXp = gained;
+      if (rankUps) this.emit({ type: 'toast', kind: 'success', title: 'OPERATOR RANK', body: `Rank ${this.profile.operatorRank}` });
+    }
+    const penalized = new Set<string>();
+    for (const def of CONTRACTS) {
+      if (this.run.contracts[def.id] !== 'active') continue;
+      if (penalized.has(def.fixerId)) continue;
+      penalized.add(def.fixerId);
+      const next = adjustRunStanding(this.run, def.fixerId, -BURN_RUN_STANDING_PENALTY);
+      this.print([
+        c.red(`  ▸ ${FIXER_BY_ID[def.fixerId].name}: Run Standing −${BURN_RUN_STANDING_PENALTY} (burn). Now ${next} (floor ${this.profile.trustFloor[def.fixerId] ?? 0}).`),
+      ]);
+    }
     this.emit({ type: 'sound', sound: 'alarm' });
     this.emit({ type: 'traced' });
+  }
+
+  /** Broker standing used for gigs/shop gates this run. */
+  standingNow(fixer: import('./progression').FixerId): number {
+    return effectiveStanding(this.profile, this.run, fixer);
   }
 
   tick(dt: number) {
@@ -380,7 +498,8 @@ export class Game {
     const ch = this.connectedHost;
     const lingering = ch && ch.alerted && ch.role !== 'home';
     if (lingering) heat += ch.security * dt;
-    if (heat > 0) this.addHeat(heat);
+    const hMul = overclockHeatMul(this.profile.perkRanks, this.breachCrackerCount());
+    if (heat > 0) this.addHeat(heat * hMul);
     else if (!this.run.procs.length && !lingering) this.run.heat = Math.max(0, this.run.heat - HEAT_DECAY_PER_SEC * dt);
     if (this.run.traced) return;
     for (const p of done) {
@@ -419,19 +538,41 @@ export class Game {
     if (this.run.contracts[id] !== 'active') return;
     const def = CONTRACT_BY_ID[id];
     this.run.contracts[id] = 'done';
-    this.print([c.green(c.bold(`  ✔ CONTRACT COMPLETE: ${def.title}`)) + c.yellow(`  +${def.payout} ¢`)]);
+    const fixer = FIXER_BY_ID[def.fixerId];
+    this.print([
+      c.green(c.bold(`  ✔ CONTRACT COMPLETE: ${def.title}`)) + c.yellow(`  +${def.payout} ¢`) + c.magenta(`  +${def.operatorXp} Operator XP`),
+    ]);
     this.pay(def.payout, `Contract: ${def.title}`);
+    const { rankUps } = grantOperatorXp(this.profile, def.operatorXp);
+    if (rankUps) {
+      this.emit({ type: 'toast', kind: 'success', title: 'OPERATOR RANK', body: `Rank ${this.profile.operatorRank}` });
+      this.print([c.magenta(`  ▸ Operator Rank ${this.profile.operatorRank}. Perk point available. Type perks.`)]);
+    }
+    const runSt = adjustRunStanding(this.run, def.fixerId, def.standingReward);
+    this.print([c.cyan(`  ▸ ${fixer.name}: Run Standing +${def.standingReward} → ${runSt}. (${standingLabel(this.profile, this.run, def.fixerId)})`)]);
+    if (def.fixerId === 'relay') {
+      const prog = this.profile.gigProgress.relay ?? { setId: 0, completed: [] };
+      if (!prog.completed.includes(id)) prog.completed.push(id);
+      this.profile.gigProgress.relay = prog;
+      if (relaySetComplete(this.profile) && !prog.floorGranted) {
+        prog.floorGranted = true;
+        const floor = raiseTrustFloor(this.profile, 'relay', 1);
+        const tmpl = MAIL_TEMPLATES.relaySetComplete;
+        this.addMail(fixer.name, tmpl.subject, [...tmpl.body, `Trust Floor with me is now ${floor}/5 (meta).`]);
+        this.print([c.cyan(`  ✉ ${fixer.name}: gig set complete. Trust Floor ${floor}/5.`)]);
+      }
+    }
     this.unlockIndex(def.indexEntryId);
     const order: ContractId[] = ['c1', 'c2', 'c3'];
     const next = order[order.indexOf(id) + 1];
     if (next && this.run.contracts[next] === 'locked') {
       this.run.contracts[next] = 'active';
       this.mailContract(next);
-      this.print([c.cyan(`  ✉ New mail from Vex. Type mail to read the next job.`)]);
+      this.print([c.cyan(`  ✉ New mail from ${fixer.name}. Type mail.`)]);
     } else if (!next) {
-      this.addMail('Vex', 'All jobs done. Extract.', [
-        'Clean work. The board is clear.',
-        'Type jackout to extract. Lower trace at extraction means a bigger stealth bonus.',
+      this.addMail(fixer.name, 'SCOPE // board clear', [
+        'All gigs on this board are closed. Extract when trace is low for a stealth credit bonus.',
+        'jackout to end the run and seed the next engagement.',
       ]);
       this.print([c.cyan('  ✉ Board clear. Type jackout to extract with a stealth bonus.')]);
     }
@@ -472,7 +613,7 @@ export class Game {
     if (!ref) err(`usage: ${t.usage}`);
     const host = findHost(this.world, ref!);
     if (!host || (!host.discovered && host.role !== 'home')) err(`${ref}: host unreachable (not on your netmap yet)`);
-    if (host!.role === 'home') err('targeting your own rig is a bad idea, choom');
+    if (host!.role === 'home') err('targeting your own rig is a bad idea');
     const ctx = this.toolCtx(host!, args);
     const problem = t.precheck(ctx);
     if (problem) {
@@ -487,13 +628,15 @@ export class Game {
       this.emit({ type: 'sound', sound: 'error' });
       err(`${t.id}: not enough RAM (needs ${ram} MB, ${free} MB free). Wait for a process to finish or kill one.`);
     }
+    const breachTools = new Set(['sshbrute', 'webscan', 'ftploot', 'getroot', 'fwbypass']);
+    const tMul = breachTools.has(t.id) ? timedriveDurationMul(this.profile.perkRanks) : 1;
     const proc: Proc = {
       pid: this.run.nextPid++,
       toolId: t.id,
       target: host!.ip,
       args,
       elapsed: 0,
-      duration: t.durationSec * (tune.durationMul ?? 1),
+      duration: t.durationSec * (tune.durationMul ?? 1) * tMul,
       ram,
       heatPerSec: t.heatPerSec * (tune.heatMul ?? 1),
     };
@@ -662,7 +805,7 @@ export class Game {
       if (at?.alerted) return { text: 'Trace is hot. Disconnect so the SOC loses your session.', cmd: 'dc' };
       if (!r.procs.length && r.heat > 50) return { text: 'Lie low. The trace cools while you stay idle and offline.' };
     }
-    if (r.mails.length && !r.mails[0].read) return { text: 'You have mail from Vex, your fixer. Read it.', cmd: 'mail' };
+    if (r.mails.length && !r.mails[0].read) return { text: 'Unread broker mail on the relay. Read it.', cmd: 'mail' };
     if (r.procs.length) return { text: `Processes running. Watch the RAM panel. You can queue another tool if RAM allows.` };
 
     const breach = (h: Host): { text: string; cmd?: string } | null => {
@@ -714,6 +857,7 @@ export class Game {
         c.magenta(' NET     ') + 'connect <host>  dc  scan  scp <path>',
         c.magenta(' BREACH  ') + 'nmap  fwrules  fwbypass  sshbrute  webscan  getroot  ps  kill',
         c.magenta(' JOBS    ') + 'mail  jobs  submit <job> <answer>  jackout',
+        c.magenta(' META    ') + 'contacts  perks  perks pick <id>  perks respec',
         c.magenta(' RIG     ') + 'shop  buy <item>  index [entry]  tools  man <tool>  workshop  status',
         c.magenta(' TRAIN   ') + `tutorial  ${c.dim('(replay the training sim)')}  tutorial skip`,
         c.magenta(' HELP    ') + `hint  clear   ${c.dim('(TAB completes, ↑↓ history, pipes with |)')}`,
@@ -954,7 +1098,10 @@ export class Game {
         for (const def of CONTRACTS) {
           const st = this.run.contracts[def.id];
           const badge = st === 'done' ? c.green('DONE  ') : st === 'active' ? c.yellow('ACTIVE') : c.dim('LOCKED');
-          lines.push(`${badge} ${c.magenta(def.id)}  ${pad(def.title, 18)} ${pad(c.dim(def.type), 18)} ${c.yellow(def.payout + '¢')}`);
+          const fixer = FIXER_BY_ID[def.fixerId];
+          lines.push(
+            `${badge} ${c.magenta(fixer.icon)} ${c.magenta(def.id)}  ${pad(def.title, 18)} ${pad(c.dim(def.type), 18)} ${c.yellow(def.payout + '¢')}`,
+          );
           if (st === 'active') lines.push(c.dim(`          ${def.objective(this.world)}`));
         }
         this.emit({ type: 'open', panel: 'jobs' });
@@ -1022,6 +1169,22 @@ export class Game {
         const item = SHOP_BY_ID[args[0]];
         if (!item) err('usage: buy <item-id>   (see shop)');
         if (this.owns(item.id)) err(`buy: you already own ${item.name}`);
+        const gate =
+          this.run.tutorial ? { blocked: false as const } : shopItemGated(item.id, this.profile, this.standingNow('relay'));
+        if (gate.blocked) err(`buy: ${item.name} locked. ${gate.reason}`);
+        const rankOk = !item.minRank || this.profile.operatorRank >= item.minRank;
+        const stOk = !item.standingGate || this.standingNow(item.standingGate.fixer) >= item.standingGate.level;
+        if (!this.run.tutorial) {
+          if (item.minRank && item.standingGate && !rankOk && !stOk) {
+            err(
+              `buy: ${item.name} requires Relay run standing ${item.standingGate.level}+ or Operator Rank ${item.minRank}+.`,
+            );
+          } else if (item.minRank && !item.standingGate && !rankOk) {
+            err(`buy: ${item.name} requires Operator Rank ${item.minRank}+.`);
+          } else if (item.standingGate && !item.minRank && !stOk) {
+            err(`buy: ${item.name} requires ${FIXER_BY_ID[item.standingGate.fixer].name} run standing ${item.standingGate.level}+.`);
+          }
+        }
         if (this.profile.credits < item.price) err(`buy: ${item.name} costs ${item.price}¢, you have ${this.profile.credits}¢`);
         this.profile.credits -= item.price;
         this.profile.owned.push(item.id);
@@ -1100,16 +1263,34 @@ export class Game {
       ],
       status: () => {
         const n = Object.keys(this.profile.index).length;
+        const xp = xpProgress(this.profile.operatorRank, this.profile.operatorXp);
         return [
           c.bold(c.cyan('GHOST // status')),
           `  credits   ${c.yellow(this.profile.credits + '¢')}   (earned this op: ${this.run.earned}¢)`,
+          `  operator  Rank ${this.profile.operatorRank}  (${xp.into}/${xp.need} XP to next)`,
+          `  standing  Relay ${standingLabel(this.profile, this.run, 'relay')}`,
           `  trace     ${this.run.heat.toFixed(0)}%${this.run.flagged ? c.red('  FLAGGED') : ''}`,
-          `  rig RAM   ${this.maxRam} MB`,
+          `  rig RAM   ${this.maxRam} MB${this.inBreach() && (this.profile.perkRanks.ram_overclock ?? 0) ? c.dim('  overclock') : ''}`,
           `  op        #${this.profile.runs}  target: ${this.world.org}  seed ${this.world.seed}`,
           `  index     ${n}/${INDEX_ENTRIES.length}`,
           `  record    ${this.profile.extracted} extracted, ${this.profile.traced} traced`,
         ];
       },
+      contacts: () => {
+        this.emit({ type: 'open', panel: 'contacts' });
+        const lines = [c.bold(c.cyan('CONTACTS // fixer roster'))];
+        const eff = (id: import('./progression').FixerId) => this.standingNow(id);
+        for (const f of FIXERS) {
+          const vis = contactVisibility(f, this.profile, eff);
+          if (vis === 'hidden') continue;
+          if (vis === 'teaser') lines.push(`${c.dim('░░')} ${f.name}  ${c.dim(f.teaser ?? 'locked')}`);
+          else if (vis === 'locked') lines.push(`${c.dim('──')} ${f.name}  ${c.dim(f.tagline)}  [locked]`);
+          else if (f.id === 'vex' && this.profile.vexGraduated) lines.push(`${c.dim('VX')} ${f.name}  training complete`);
+          else lines.push(`${f.id === 'relay' ? c.green(f.icon) : c.magenta(f.icon)} ${f.name}  ${standingLabel(this.profile, this.run, f.id)}  ${f.tagline}`);
+        }
+        return lines;
+      },
+      perks: (args) => this.cmdPerks(args),
       tutorial: (args) => {
         if (args[0] === 'skip') {
           if (!this.run.tutorial) err('tutorial: you are not in training');
@@ -1128,12 +1309,61 @@ export class Game {
         if (bonus) this.pay(bonus, 'Stealth bonus');
         this.profile.extracted += allDone ? 1 : 0;
         const lines = [c.green(c.bold(`  ▸ EXTRACTED.`)) + (bonus ? c.yellow(` Stealth bonus +${bonus}¢`) : '')];
-        this.startRun();
+        this.startRun({ afterJackout: true });
         this.emit({ type: 'clear' });
         return [...lines, c.cyan(`New op loaded: ${this.world.org}. Type mail.`)];
       },
     };
     return cmds;
+  }
+
+  private cmdPerks(args: string[]): string[] {
+    const sub = args[0];
+    if (sub === 'pick') {
+      const pick = args[1];
+      if (pick !== 'timedrive' && pick !== 'ram_overclock') err('usage: perks pick timedrive|ram_overclock');
+      const perkId = (pick === 'timedrive' ? 'timedrive' : 'ram_overclock') satisfies PerkId;
+      const def = PERK_DEFS[perkId];
+      if (this.profile.operatorRank < def.minRank) err(`perks: ${def.name} needs Operator Rank ${def.minRank}+`);
+      const cur = this.profile.perkRanks[perkId] ?? 0;
+      if (cur >= def.max) err(`perks: ${def.name} is maxed`);
+      if (perkPointsAvailable(this.profile.operatorRank, this.profile.perkRanks) < 1) err('perks: no perk points available');
+      this.profile.perkRanks[perkId] = cur + 1;
+      this.profile.pendingPerkPick = false;
+      this.emit({ type: 'sound', sound: 'unlock' });
+      return [c.green(`  ▸ ${def.name} rank ${cur + 1} equipped.`), c.dim(`  ${def.desc}`)];
+    }
+    if (sub === 'respec') {
+      if (this.run.tutorial) err('perks: not in training');
+      const points = Object.values(this.profile.perkRanks).reduce((s, n) => s + (n ?? 0), 0);
+      if (!points) err('perks: nothing allocated');
+      if (this.profile.freeRespecThisRun) {
+        clearPerks(this.profile);
+        this.profile.freeRespecThisRun = false;
+        return [c.green('  ▸ Perks cleared (free respec for this run).')];
+      }
+      const cost = respecCreditCost(this.profile.operatorRank);
+      if (this.profile.credits < cost) err(`perks: respec costs ${cost}¢, you have ${this.profile.credits}¢`);
+      this.profile.credits -= cost;
+      clearPerks(this.profile);
+      return [c.yellow(`  ▸ Perks cleared. -${cost}¢`)];
+    }
+    this.emit({ type: 'open', panel: 'perks' });
+    const avail = perkPointsAvailable(this.profile.operatorRank, this.profile.perkRanks);
+    const lines = [
+      c.bold(c.cyan(`PERK TREE // Rank ${this.profile.operatorRank}`)),
+      c.dim(`  Points available: ${avail}${this.profile.freeRespecThisRun ? '  | free respec available' : ''}`),
+    ];
+    for (const def of Object.values(PERK_DEFS)) {
+      const rank = this.profile.perkRanks[def.id] ?? 0;
+      const locked = this.profile.operatorRank < def.minRank;
+      lines.push(
+        `  ${locked ? c.dim('◇') : rank ? c.green('◆') : c.yellow('○')} ${def.name} ${rank}/${def.max}  ${c.dim(def.branch)}`,
+        c.dim(`      ${def.desc}`),
+      );
+    }
+    lines.push(c.dim('  perks pick <id>   perks respec'));
+    return lines;
   }
 
   private headTail(args: string[], stdin: string[] | null, which: 'head' | 'tail'): string[] {

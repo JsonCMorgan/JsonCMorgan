@@ -13,11 +13,14 @@ import { findHost } from './engine/network';
 import { Synth } from './ui/audio';
 import {
   esc,
+  contactsModalHtml,
   guideHtml,
   indexModalHtml,
   jobsModalHtml,
   mailModalHtml,
   netmapHtml,
+  operatorRankHtml,
+  perksModalHtml,
   ramHtml,
   shopModalHtml,
   targetHtml,
@@ -61,7 +64,7 @@ const synth = new Synth();
 synth.enabled = game.profile.sound;
 
 let focusIp: string | null = game.world.gatewayIp;
-let modal: { kind: 'index' | 'shop' | 'jobs' | 'mail'; arg?: string } | null = null;
+let modal: { kind: 'index' | 'shop' | 'jobs' | 'mail' | 'contacts' | 'perks'; arg?: string } | null = null;
 let shownCredits = game.profile.credits;
 
 function persist() {
@@ -194,7 +197,7 @@ function renderAll() {
   const unreadIdx = Object.values(game.profile.index).filter((x) => !x.read).length;
   setHtml(
     '#topinfo',
-    `<span class="op">OP #${game.profile.runs}</span><span class="org">${esc(game.world.org)}</span>`,
+    `${operatorRankHtml(game)}<span class="op">OP #${game.profile.runs}</span><span class="org">${esc(game.world.org)}</span>`,
   );
   setHtml('#mail-badge', unreadMail ? String(unreadMail) : '');
   setHtml('#index-badge', unreadIdx ? String(unreadIdx) : '');
@@ -216,7 +219,7 @@ function renderCredits(dt: number) {
 }
 
 // ------------------------------------------------------------------ modals
-function openModal(kind: 'index' | 'shop' | 'jobs' | 'mail', arg?: string) {
+function openModal(kind: 'index' | 'shop' | 'jobs' | 'mail' | 'contacts' | 'perks', arg?: string) {
   modal = { kind, arg };
   $('#modal').hidden = false;
   cache.delete('#modal-box');
@@ -237,7 +240,11 @@ function renderModal() {
         ? shopModalHtml(game)
         : modal.kind === 'jobs'
           ? jobsModalHtml(game)
-          : mailModalHtml(game, Number(modal.arg ?? game.run.mails.findIndex((m) => !m.read)) >= 0 ? Number(modal.arg ?? game.run.mails.findIndex((m) => !m.read)) : game.run.mails.length - 1);
+          : modal.kind === 'contacts'
+            ? contactsModalHtml(game)
+            : modal.kind === 'perks'
+              ? perksModalHtml(game)
+              : mailModalHtml(game, Number(modal.arg ?? game.run.mails.findIndex((m) => !m.read)) >= 0 ? Number(modal.arg ?? game.run.mails.findIndex((m) => !m.read)) : game.run.mails.length - 1);
   const box = $('#modal-box');
   box.className = `modal-box ${modal.kind}`;
   setHtml('#modal-box', html);
@@ -256,6 +263,23 @@ $('#modal').addEventListener('click', (ev) => {
   if (buy) {
     term.print([c.dim(`$ buy ${buy.dataset.buy}`)]);
     runCommand(`buy ${buy.dataset.buy}`);
+    return;
+  }
+  const perk = t.closest<HTMLElement>('[data-perk]');
+  if (perk?.dataset.perk) {
+    term.print([c.dim(`$ perks pick ${perk.dataset.perk}`)]);
+    runCommand(`perks pick ${perk.dataset.perk}`);
+    return;
+  }
+  if (t.closest('[data-perk-respec]')) {
+    term.print([c.dim('$ perks respec')]);
+    runCommand('perks respec');
+    return;
+  }
+  const panel = t.closest<HTMLElement>('[data-panel]');
+  if (panel?.dataset.panel === 'jobs') {
+    closeModal();
+    openModal('jobs');
     return;
   }
   const mail = t.closest<HTMLElement>('[data-mail]');
@@ -281,6 +305,8 @@ bindHotkeys(window, {
 // ------------------------------------------------------------------ chrome buttons
 $('#btn-mail').addEventListener('click', () => openModal('mail'));
 $('#btn-jobs').addEventListener('click', () => openModal('jobs'));
+$('#btn-contacts').addEventListener('click', () => openModal('contacts'));
+$('#btn-perks').addEventListener('click', () => openModal('perks'));
 $('#btn-shop').addEventListener('click', () => openModal('shop'));
 $('#btn-index').addEventListener('click', () => openModal('index'));
 $('#btn-train').addEventListener('click', () => {
@@ -349,7 +375,9 @@ function showTraced() {
       <div class="traced-sub">IDENTITY BURNED // ${esc(game.world.org)} SOC has your source IP</div>
       <div class="traced-stats">
         <div><b>${game.run.earned}¢</b><span>earned this op (banked)</span></div>
+        <div><b>${game.run._burnXp ?? 0}</b><span>Operator XP (25% consolation)</span></div>
         <div><b>${game.profile.credits}¢</b><span>credits carried over</span></div>
+        <div><b>R${game.profile.operatorRank}</b><span>Operator Rank kept</span></div>
         <div><b>${Object.keys(game.profile.index).length}/${INDEX_ENTRIES.length}</b><span>index entries kept</span></div>
       </div>
       <p class="dim">Tools, upgrades and the Index persist. Quiet beats fast: let the trace cool between breaches, and scrub logs on boxes you own.</p>
@@ -360,7 +388,7 @@ function showTraced() {
   disposeTracedPrompt = bindPressEnter(window, () => {
     disposeTracedPrompt = null;
     s.hidden = true;
-    game.startRun();
+    game.startRun({ afterJackout: true });
     term.locked = false;
     term.clear();
     persist();
@@ -381,7 +409,7 @@ async function boot(short = false) {
         `${c.green('[ ok ]')} mounting /home/ghost`,
         `${c.green('[ ok ]')} breach kit: nmap sshbrute webscan fwbypass getroot${game.owns('ftploot') ? ' ftploot' : ''}`,
         `${c.green('[ ok ]')} rig RAM ${game.maxRam} MB  //  trace monitor online`,
-        `${c.green('[ ok ]')} uplink to Vex's relay ${c.dim('(encrypted)')}`,
+        `${c.green('[ ok ]')} uplink to broker relay ${c.dim('(encrypted)')}`,
       ];
   for (const l of lines) {
     term.writeRaw(l + '\r\n');

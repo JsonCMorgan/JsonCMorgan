@@ -13,6 +13,9 @@ function settle(g: Game, maxSec = 60) {
 
 function setup() {
   const g = new Game(null, SEED, { tutorial: false });
+  g.profile.relayUnlocked = true;
+  g.profile.operatorRank = 4;
+  g.run.runStanding.relay = 2;
   const events: GameEvent[] = [];
   g.on((e) => events.push(e));
   const w = g.world;

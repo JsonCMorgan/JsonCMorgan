@@ -1,3 +1,5 @@
+import type { FixerId } from '../progression';
+
 export interface ShopItem {
   id: string;
   name: string;
@@ -5,6 +7,10 @@ export interface ShopItem {
   price: number;
   blurb: string;
   effect: string;
+  /** Minimum Operator Rank (optional). */
+  minRank?: number;
+  /** Standing gate: fixer + level (optional; OR with minRank in buy()). */
+  standingGate?: { fixer: FixerId; level: number };
 }
 
 export const SHOP_ITEMS: ShopItem[] = [
@@ -15,6 +21,8 @@ export const SHOP_ITEMS: ShopItem[] = [
     price: 300,
     blurb: 'Anonymous FTP login and cleartext sniffing. Opens port 21.',
     effect: 'New breach tool: quiet, cheap on RAM (120 MB).',
+    standingGate: { fixer: 'relay', level: 2 },
+    minRank: 4,
   },
   {
     id: 'ram-512',
@@ -23,6 +31,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     price: 400,
     blurb: 'Black-market DIMMs. Run more crackers at once.',
     effect: 'Rig RAM 512 MB → 1024 MB.',
+    minRank: 2,
   },
   {
     id: 'wordlist-plus',
@@ -39,6 +48,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     price: 350,
     blurb: 'Jittered timing and spread source ports to slip under thresholds.',
     effect: 'sshbrute generates 50% less heat.',
+    minRank: 3,
   },
 ];
 

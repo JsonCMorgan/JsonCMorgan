@@ -4,6 +4,16 @@ import { SHOP_ITEMS } from '../engine/content/shop';
 import { TUTORIAL_PAY_FIRST, TUTORIAL_PAY_REPLAY, TUTORIAL_STEPS } from '../engine/tutorial';
 import type { Game } from '../engine/game';
 import { findHost, Host, openPortCount } from '../engine/network';
+import {
+  FIXERS,
+  FIXER_BY_ID,
+  PERK_DEFS,
+  contactVisibility,
+  perkPointsAvailable,
+  respecCreditCost,
+  standingLabel,
+  xpProgress,
+} from '../engine/progression';
 
 export const esc = (s: string) =>
   s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
@@ -173,16 +183,32 @@ export function indexModalHtml(g: Game, selected?: string): string {
     <div class="idx-wrap"><div class="idx-list">${list}</div>${detail}</div>`;
 }
 
+export function operatorRankHtml(g: Game): string {
+  const xp = xpProgress(g.profile.operatorRank, g.profile.operatorXp);
+  return `<span class="rank-pill" title="Operator Rank / Street Cred">R${g.profile.operatorRank} <span class="rank-bar"><i style="width:${xp.pct}%"></i></span></span>`;
+}
+
 export function shopModalHtml(g: Game): string {
   const cards = SHOP_ITEMS.map((i) => {
     const owned = g.owns(i.id);
     const afford = g.profile.credits >= i.price;
-    return `<div class="shop-card ${owned ? 'owned' : ''} kind-${i.kind}">
+    const rankOk = !i.minRank || g.profile.operatorRank >= i.minRank;
+    const stOk = !i.standingGate || g.standingNow(i.standingGate.fixer) >= i.standingGate.level;
+    const gated = !owned && i.minRank && i.standingGate ? !(rankOk || stOk) : !owned && i.minRank ? !rankOk : !owned && i.standingGate ? !stOk : false;
+    const gateHint = gated
+      ? i.standingGate && i.minRank
+        ? `Relay run ${i.standingGate.level}+ or Rank ${i.minRank}+`
+        : i.minRank
+          ? `Rank ${i.minRank}+`
+          : `Run standing ${i.standingGate!.level}+`
+      : '';
+    return `<div class="shop-card ${owned ? 'owned' : ''} ${gated ? 'gated' : ''} kind-${i.kind}">
       <div class="shop-kind">${i.kind.toUpperCase()}</div>
       <div class="shop-name">${esc(i.name)}</div>
       <p>${esc(i.blurb)}</p>
       <p class="effect">${esc(i.effect)}</p>
-      <button class="buy" data-buy="${i.id}" ${owned || !afford ? 'disabled' : ''}>${owned ? 'OWNED' : `BUY ${i.price}¢`}</button>
+      ${gateHint ? `<p class="gate dim">${esc(gateHint)}</p>` : ''}
+      <button class="buy" data-buy="${i.id}" ${owned || !afford || gated ? 'disabled' : ''}>${owned ? 'OWNED' : `BUY ${i.price}¢`}</button>
     </div>`;
   }).join('');
   return `<div class="modal-head"><h3>BLACK MARKET <span class="credits-pill">${g.profile.credits}¢</span></h3><button class="x" data-close>✕</button></div>
@@ -203,12 +229,57 @@ export function jobsModalHtml(g: Game): string {
       <div class="job-title">${esc(c.title)}</div><div class="dim">Finish training to unlock.</div><div class="job-state">LOCKED</div></div>`;
     }
     const st = g.run.contracts[c.id];
-    return `<div class="job-card ${st}"><div class="job-top"><span class="tag">${c.id.toUpperCase()} · ${esc(c.type)}</span><span class="pay">${c.payout}¢</span></div>
+    const fixer = FIXER_BY_ID[c.fixerId];
+    return `<div class="job-card ${st}"><div class="job-top"><span class="fixer-icon" title="${esc(fixer.name)}">${esc(fixer.icon)}</span><span class="tag">${c.id.toUpperCase()} · ${esc(c.type)}</span><span class="pay">${c.payout}¢</span></div>
       <div class="job-title">${esc(c.title)}</div>
       <div class="dim">${st === 'locked' ? 'Unlocks after the previous job.' : esc(c.objective(g.world))}</div>
       <div class="job-state">${st.toUpperCase()}</div></div>`;
   }).join('');
   return `<div class="modal-head"><h3>CONTRACT BOARD <span class="dim">${esc(g.world.org)}</span></h3><button class="x" data-close>✕</button></div><div class="jobs-grid ${t ? 'four' : ''}">${cards}</div>`;
+}
+
+export function contactsModalHtml(g: Game): string {
+  const eff = (id: import('../engine/progression').FixerId) => g.standingNow(id);
+  const cards = FIXERS.map((f) => {
+    const vis = contactVisibility(f, g.profile, eff);
+    if (vis === 'hidden') return '';
+    const pulse = vis === 'active' && f.id === 'relay';
+    if (vis === 'teaser') {
+      return `<div class="contact-card teaser"><span class="fixer-icon dim">${esc(f.icon)}</span><div><b>${esc(f.name)}</b><div class="dim">${esc(f.teaser ?? '')}</div></div></div>`;
+    }
+    if (vis === 'locked') {
+      return `<div class="contact-card locked"><span class="fixer-icon dim">${esc(f.icon)}</span><div><b>${esc(f.name)}</b><div class="dim">${esc(f.tagline)}</div></div></div>`;
+    }
+    if (f.id === 'vex' && g.profile.vexGraduated) {
+      return `<div class="contact-card done"><span class="fixer-icon dim">VX</span><div><b>Vex</b><div class="dim">Training complete</div></div></div>`;
+    }
+    const lbl = standingLabel(g.profile, g.run, f.id);
+    return `<div class="contact-card ${pulse ? 'pulse' : 'active'}"><span class="fixer-icon">${esc(f.icon)}</span>
+      <div><b>${esc(f.name)}</b><div class="dim">${esc(f.tagline)}</div>
+      <div class="standing-meter"><span title="Run standing · Trust Floor (meta)">${esc(lbl)}</span><button type="button" class="chip" data-panel="jobs">Request work</button></div></div></div>`;
+  }).join('');
+  return `<div class="modal-head"><h3>CONTACTS <span class="dim">fixer roster</span></h3><button class="x" data-close>✕</button></div>
+    <p class="dim modal-sub">Run Standing (this op) gates gigs and fixer shop hooks. Trust Floor (meta, 0–5) is your jack-in baseline and only rises when you finish a broker set.</p>
+    <div class="contacts-grid">${cards}</div>`;
+}
+
+export function perksModalHtml(g: Game): string {
+  const avail = perkPointsAvailable(g.profile.operatorRank, g.profile.perkRanks);
+  const cost = respecCreditCost(g.profile.operatorRank);
+  const cards = Object.values(PERK_DEFS).map((def) => {
+    const rank = g.profile.perkRanks[def.id] ?? 0;
+    const locked = g.profile.operatorRank < def.minRank;
+    const canBuy = !locked && rank < def.max && avail > 0;
+    return `<div class="perk-card ${locked ? 'locked' : ''} branch-${def.branch}">
+      <div class="perk-name">${esc(def.name)} <span class="dim">${rank}/${def.max}</span></div>
+      <p class="dim">${esc(def.desc)}</p>
+      ${locked ? `<p class="gate">Rank ${def.minRank}+</p>` : `<button class="buy" data-perk="${def.id}" ${canBuy ? '' : 'disabled'}>${rank ? 'RANK UP' : 'EQUIP I'}</button>`}
+    </div>`;
+  }).join('');
+  return `<div class="modal-head"><h3>PERKS <span class="dim">${avail} point${avail === 1 ? '' : 's'}</span></h3><button class="x" data-close>✕</button></div>
+    <p class="dim modal-sub">${g.profile.freeRespecThisRun ? 'Free respec available this run.' : `Paid respec: ${cost}¢`}</p>
+    <button class="ghost-btn" data-perk-respec ${avail === perkPointsAvailable(g.profile.operatorRank, g.profile.perkRanks) && Object.values(g.profile.perkRanks).every((n) => !n) ? 'disabled' : ''}>Respec</button>
+    <div class="perks-grid">${cards}</div>`;
 }
 
 export function mailModalHtml(g: Game, idx: number): string {
