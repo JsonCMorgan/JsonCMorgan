@@ -72,6 +72,10 @@ export class GameTerminal {
     this.term.focus();
   }
 
+  blur() {
+    this.term.blur();
+  }
+
   private render() {
     const p = this.hooks.prompt();
     this.term.write('\r\x1b[2K' + p + this.buf);

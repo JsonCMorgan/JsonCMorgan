@@ -24,6 +24,7 @@ import {
   traceHtml,
 } from './ui/panels';
 import { morph } from './ui/morph';
+import { bindPressEnter } from './ui/prompt';
 import { GameTerminal } from './ui/terminal';
 import { TUTORIAL_STEPS } from './engine/tutorial';
 import { TRAINING_INTRUDER_IP, TRAINING_VAULT_IP } from './engine/network';
@@ -312,9 +313,18 @@ $('#netmap').addEventListener('click', (ev) => {
   if (h.role !== 'home') term.setInput(`connect ${ip}`);
   renderAll();
 });
-$('#app').addEventListener('mouseup', () => {
+/** Puts keyboard focus where the visible screen expects it: an overlay's main button, or the terminal. */
+function refocus() {
+  const overlayBtn = !$('#title').hidden ? $('#jack-in') : !$('#traced').hidden ? $('#new-identity') : null;
+  if (overlayBtn) {
+    const active = document.activeElement as HTMLElement | null;
+    if (!active?.closest('#title, #traced') || active.tagName !== 'BUTTON') overlayBtn.focus();
+    return;
+  }
   if (!modal && !window.getSelection()?.toString()) term.focus();
-});
+}
+document.addEventListener('mouseup', refocus);
+window.addEventListener('focus', refocus);
 
 // ------------------------------------------------------------------ traced
 function showTraced() {
@@ -331,14 +341,17 @@ function showTraced() {
       <p class="dim">Tools, upgrades and the Index persist. Quiet beats fast: let the trace cool between breaches, and scrub logs on boxes you own.</p>
       <button id="new-identity" class="big-btn">FORGE NEW IDENTITY ▸</button></div>`;
   s.hidden = false;
-  $('#new-identity').addEventListener('click', () => {
+  term.blur();
+  $('#new-identity').focus();
+  bindPressEnter(window, () => {
     s.hidden = true;
     game.startRun();
     term.locked = false;
     term.clear();
     persist();
+    term.focus();
     void boot(true);
-  });
+  }, { clickTargets: [$('#new-identity')] });
 }
 
 // ------------------------------------------------------------------ boot
@@ -405,11 +418,20 @@ function showTitle() {
     <div class="press">press ENTER</div>
     <div class="disclaimer">Every network, host and target in this game is simulated. Real techniques, fictional victims.</div>
   </div>`;
+  term.locked = true;
+  term.blur();
+  let started = false;
   const go = (training = false) => {
-    window.removeEventListener('keydown', onKey);
+    if (started) return;
+    started = true;
+    disposeEnter();
     t.classList.add('out');
     synth.play('granted');
-    setTimeout(() => (t.hidden = true), 600);
+    setTimeout(() => {
+      t.hidden = true;
+      refocus();
+    }, 600);
+    term.focus();
     if (training && !game.inTutorial) {
       game.startTutorial();
       persist();
@@ -419,15 +441,17 @@ function showTitle() {
       if (tutorialDemo) void runTutorialDemo();
     });
   };
-  const onKey = (e: KeyboardEvent) => e.key === 'Enter' && go();
-  window.addEventListener('keydown', onKey);
-  $('#jack-in').addEventListener('click', () => go());
+  const disposeEnter = bindPressEnter(window, () => go(), {
+    clickTargets: [$('#jack-in'), t.querySelector('.press')],
+    ignore: () => ['train', 'wipe'].includes(document.activeElement?.id ?? ''),
+  });
   $('#train')?.addEventListener('click', () => go(true));
   $('#wipe')?.addEventListener('click', () => {
     if (!confirm('Wipe your save and start over?')) return;
     localStorage.removeItem(SAVE_KEY);
     location.reload();
   });
+  $('#jack-in').focus();
   if (demoMode || tutorialDemo) setTimeout(() => go(), 2200);
 }
 
