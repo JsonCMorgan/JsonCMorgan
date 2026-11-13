@@ -1,0 +1,11 @@
+{
+  "fixerIds": ["relay", "kurohashi", "merit", "cap", "mr_cipher"],
+  "clientFiction": ["Contoso", "NorthPeak", "Harbor", "GreenLeaf"],
+  "grammarByFixer": {
+    "relay": "relay_scope_v1",
+    "kurohashi": "cipher_cold_v1",
+    "merit": "relay_scope_v1",
+    "cap": "cipher_cold_v1",
+    "mr_cipher": "cipher_cold_v1"
+  }
+}

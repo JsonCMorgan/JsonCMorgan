@@ -1,0 +1,14 @@
+id: cipher_cold_v1
+fixerTone: minimal
+slots:
+  - client
+  - artifact
+  - objective
+  - heat_warning
+  - payout_credits
+subjectTemplate: "CIPHER // {{title}} // {{client}}"
+bodyTemplate:
+  - "{{client}}. Scope is tight. {{heat_warning}}"
+  - "Deliverable: {{artifact}}."
+  - "{{objective}}"
+  - "Payment on exfil confirmation. {{payout_credits}} credits."

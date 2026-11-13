@@ -1,0 +1,93 @@
+{
+  "fixers": [
+    {
+      "id": "vex",
+      "name": "Vex",
+      "tagline": "Former corp netsec instructor",
+      "icon": "VX",
+      "role": "trainer",
+      "visibleWhenLocked": false
+    },
+    {
+      "id": "relay",
+      "name": "Relay",
+      "tagline": "Grey-hat collective broker",
+      "icon": "RL",
+      "role": "broker",
+      "unlock": "vexGraduated"
+    },
+    {
+      "id": "kurohashi",
+      "name": "Kurohashi",
+      "tagline": "Corporate acquisition specialist",
+      "icon": "KH",
+      "role": "broker",
+      "unlock": "standing:relay:2|rank:3",
+      "hiddenUntilMet": true
+    },
+    {
+      "id": "merit",
+      "name": "Merit Ibarra",
+      "tagline": "Community clinic net",
+      "icon": "MI",
+      "role": "broker",
+      "unlock": "rank:4",
+      "hiddenUntilMet": true
+    },
+    {
+      "id": "cap",
+      "name": "Cap Reeves",
+      "tagline": "Salvage and bomb runs",
+      "icon": "CR",
+      "role": "broker",
+      "unlock": "rank:6",
+      "hiddenUntilMet": true
+    },
+    {
+      "id": "cipher",
+      "name": "Mr. Cipher",
+      "tagline": "Elite phantom broker",
+      "icon": "??",
+      "role": "broker",
+      "unlock": "cipher",
+      "visibleWhenLocked": true,
+      "teaser": "Finish the roster. Then we talk scope."
+    }
+  ],
+  "gigSets": {
+    "relay": [
+      {
+        "setId": 0,
+        "gigIds": ["c1", "c2", "c3"],
+        "completeRule": { "type": "any", "count": 2 },
+        "standingCap": 5
+      }
+    ]
+  },
+  "mailTemplates": {
+    "vexGraduation": {
+      "subject": "TRAINING // cleared for live scope",
+      "body": [
+        "Ghost. You cleared the sim: navigation, port scan, credential attack, trace thresholds.",
+        "You are not my student anymore. I do not broker paid work.",
+        "Relay handles contracts from here. Stay in scope. Document what you touch."
+      ]
+    },
+    "vexRelayIntro": {
+      "subject": "HANDOFF // Relay",
+      "body": [
+        "Vex forwarded your handle. I broker breach-and-retrieve and recon gigs for clients who want results, not drama.",
+        "Every job has written scope. Out-of-bounds hosts spike SOC correlation and cost you Standing with me.",
+        "Check JOBS on the board. First set is basic: edge survey, exfil, log triage. Operator Rank tracks your Street Cred.",
+        "Core verbs: help 3 (network), help 4 (crackers), help 5 (firewalls). hints auto unless you change it."
+      ]
+    },
+    "relaySetComplete": {
+      "subject": "SET // acknowledged",
+      "body": [
+        "Set closed. Your Standing with me moved. Next hub visit I will seed harder scope.",
+        "Keep heat under control at exfil if you want the stealth payout bonus."
+      ]
+    }
+  }
+}

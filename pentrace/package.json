@@ -1,0 +1,32 @@
+{
+  "name": "pentrace",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PenTrace: a neon cyberpunk hacking roguelite. Breach simulated networks, get paid, learn real security.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "mission:draft": "node tools/mission/mission-llama.mjs",
+    "mission:validate": "node tools/mission/mission-validate.mjs",
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/orbitron": "^5.3.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0",
+    "yaml": "^2.7.0"
+  }
+}

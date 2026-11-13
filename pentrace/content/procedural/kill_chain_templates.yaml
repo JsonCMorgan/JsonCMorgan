@@ -1,0 +1,26 @@
+# Approved kill-chain templates (assembler / validator enforce these only).
+templates:
+  - id: K1_recon_only
+    steps:
+      - breachStepId: recon_nmap
+        indexEntryId: port-scanning
+      - breachStepId: report_footprint
+        indexEntryId: port-scanning
+  - id: K2_breach_exfil
+    steps:
+      - breachStepId: recon_nmap
+        indexEntryId: port-scanning
+      - breachStepId: access_sshbrute
+        indexEntryId: ssh-credential-attacks
+      - breachStepId: priv_esc
+        indexEntryId: privilege-escalation
+      - breachStepId: exfil_scp
+        indexEntryId: covering-tracks
+  - id: K3_log_hunt
+    steps:
+      - breachStepId: access_shell
+        indexEntryId: weak-default-creds
+      - breachStepId: log_grep
+        indexEntryId: log-analysis
+      - breachStepId: submit_ioc
+        indexEntryId: log-analysis
