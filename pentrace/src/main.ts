@@ -31,6 +31,7 @@ import { startDefensePreview } from './engine/game-defense';
 import { morph } from './ui/morph';
 import { bindHotkeys, bindPressEnter } from './ui/prompt';
 import { advanceClock } from './engine/clock';
+import { commandDelayPlan } from './engine/command-delay';
 import { GameTerminal } from './ui/terminal';
 import { TUTORIAL_STEPS } from './engine/tutorial';
 import { TRAINING_INTRUDER_IP, TRAINING_VAULT_IP } from './engine/network';
@@ -138,10 +139,12 @@ const term = new GameTerminal($('#terminal'), {
   submit: (line) => runCommand(line),
 });
 
-function runCommand(line: string) {
+async function runCommand(line: string) {
   const beforeStep = game.run.tutorial?.step;
   const ipMatch = line.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g);
   const out = game.exec(line);
+  const plan = commandDelayPlan(line, out);
+  await term.revealCommandOutput(out, plan);
   if (line.trim().startsWith('hints')) {
     prefs.hintLevel = game.profile.hintLevel ?? prefs.hintLevel;
     savePrefs();
@@ -153,7 +156,6 @@ function runCommand(line: string) {
     else if (known && line.startsWith('fwbypass')) focusIp = ipMatch[0];
   }
   if (/^\s*(connect)\b/.test(line) && game.run.connected) focusIp = game.run.connected;
-  term.print(out);
   persist();
   renderAll();
 }
@@ -613,7 +615,7 @@ function showTitle() {
 // ------------------------------------------------------------------ demo / attract mode
 async function waitIdle() {
   await sleep(500);
-  while (game.run.procs.length) await sleep(200);
+  while (game.run.procs.length || term.commandBusy) await sleep(200);
   await sleep(900);
 }
 async function runDemo() {

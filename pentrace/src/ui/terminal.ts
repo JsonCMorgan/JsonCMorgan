@@ -1,10 +1,14 @@
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import { stripAnsi } from '../engine/ansi';
+import { type CommandDelayPlan, streamLineDelayMs } from '../engine/command-delay';
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const WORK_FRAMES = ['▖', '▘', '▝', '▗'];
 
 export interface TermHooks {
   prompt(): string;
-  submit(line: string): void;
+  submit(line: string): void | Promise<void>;
   complete(partial: string): string[];
   onKey?(): void;
 }
@@ -18,7 +22,14 @@ export class GameTerminal {
   private history: string[] = [];
   private histIdx = -1;
   private typing = false;
+  /** Command in flight: lock input and show busy animation (separate from title/traced lock). */
+  private running = false;
+  private workTimer: ReturnType<typeof setInterval> | null = null;
   locked = false;
+
+  get commandBusy(): boolean {
+    return this.running;
+  }
 
   constructor(el: HTMLElement, private hooks: TermHooks) {
     this.term = new Terminal({
@@ -103,7 +114,61 @@ export class GameTerminal {
   print(lines: string[]) {
     if (!lines.length) return;
     this.term.write('\r\x1b[2K' + lines.join('\r\n') + '\r\n');
-    if (!this.locked) this.render();
+    if (!this.locked && !this.running) this.render();
+  }
+
+  private stopWorking() {
+    if (this.workTimer) clearInterval(this.workTimer);
+    this.workTimer = null;
+  }
+
+  private workingStatus(frame: string) {
+    return (
+      '\x1b[2m\x1b[38;5;45m' +
+      frame +
+      '\x1b[0m\x1b[2m neonsh: working on request' +
+      '\x1b[0m\x1b[2m · · ·\x1b[0m'
+    );
+  }
+
+  private async playWorking(ms: number) {
+    if (ms <= 0) return;
+    let frame = 0;
+    const tick = () => {
+      this.term.write('\r\x1b[2K' + this.workingStatus(WORK_FRAMES[frame % WORK_FRAMES.length]));
+      frame++;
+    };
+    tick();
+    this.workTimer = setInterval(tick, 95);
+    await sleep(ms);
+    this.stopWorking();
+    this.term.write('\r\x1b[2K');
+  }
+
+  /** Busy animation, then instant or streamed command output. Does not touch game events. */
+  async revealCommandOutput(lines: string[], plan: CommandDelayPlan) {
+    this.running = true;
+    try {
+      if (plan.instant) {
+        if (lines.length) this.print(lines);
+        return;
+      }
+      await this.playWorking(plan.delayMs);
+      if (!lines.length) return;
+      if (!plan.stream || lines.length === 1) {
+        this.print(lines);
+        return;
+      }
+      for (let i = 0; i < lines.length; i++) {
+        if (i > 0) this.term.write('\r\n');
+        this.term.write(lines[i]);
+        await sleep(streamLineDelayMs(lines[i]));
+      }
+      this.term.write('\r\n');
+    } finally {
+      this.running = false;
+      if (!this.locked) this.render();
+    }
   }
 
   writeRaw(s: string) {
@@ -129,7 +194,7 @@ export class GameTerminal {
     this.cursor = 0;
     this.render();
     await this.typeText(cmd, cps);
-    this.enter();
+    await this.enter();
   }
 
   async typeText(text: string, cps = 28) {
@@ -156,22 +221,25 @@ export class GameTerminal {
     this.enter();
   }
 
-  private enter() {
+  private async enter(): Promise<void> {
     const line = this.buf;
     this.term.write('\r\n');
     this.buf = '';
     this.cursor = 0;
     this.histIdx = -1;
     if (line.trim() && this.history[this.history.length - 1] !== line) this.history.push(line);
-    this.hooks.submit(line);
-    if (!this.locked) this.render();
+    try {
+      await this.hooks.submit(line);
+    } finally {
+      if (!this.locked && !this.running) this.render();
+    }
   }
 
   private onData(data: string) {
-    if (this.locked || this.typing) return;
+    if (this.locked || this.typing || this.running) return;
     switch (data) {
       case '\r':
-        this.enter();
+        void this.enter();
         return;
       case '\x7f':
       case '\b':
