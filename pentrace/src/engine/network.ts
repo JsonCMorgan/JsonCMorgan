@@ -1,5 +1,5 @@
 import { Rng } from './rng';
-import { dir, file, VDir } from './vfs';
+import { dir, file, VDir, VNode } from './vfs';
 
 export interface Port {
   num: number;
@@ -99,6 +99,28 @@ function authLog(rng: Rng, hostname: string, attackerIp: string, legitIp: string
   return lines.join('\n') + '\n';
 }
 
+/** Standard /etc flavor files every Linux box has. Fictional accounts only. */
+function etcBase(hostname: string, users: { name: string; uid: number; shell?: string }[], motd: string, extra: Record<string, VNode> = {}): VDir {
+  const passwd = [
+    'root:x:0:0:root:/root:/bin/bash',
+    'daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin',
+    'sshd:x:110:65534::/run/sshd:/usr/sbin/nologin',
+    ...users.map((u) => `${u.name}:x:${u.uid}:${u.uid}::/home/${u.name}:${u.shell ?? '/bin/bash'}`),
+  ];
+  return dir({
+    hostname: file(hostname + '\n'),
+    hosts: file(`127.0.0.1\tlocalhost\n127.0.1.1\t${hostname}\n`),
+    'os-release': file('NAME="NeonOS"\nVERSION="22.04 LTS (Chrome Jackal)"\nID=neonos\nID_LIKE=debian\n'),
+    passwd: file(passwd.join('\n') + '\n'),
+    motd: file(motd),
+    ...extra,
+  });
+}
+
+function bashHistory(lines: string[]): VNode {
+  return file(lines.join('\n') + '\n');
+}
+
 export function homeHost(gatewayIp: string): Host {
   return {
     ip: HOME_IP,
@@ -118,8 +140,34 @@ export function homeHost(gatewayIp: string): Host {
     account: { user: 'ghost', pass: '', isDefault: false },
     credsFound: true,
     fs: dir({
+      etc: etcBase('ghost-rig', [{ name: 'ghost', uid: 1000 }], 'NEON//OS ghost-rig. Your deck, your rules.\n'),
+      tmp: dir(),
+      var: dir({
+        log: dir({
+          syslog: file(
+            'Nov 11 02:58:12 ghost-rig kernel: [    0.000000] NEON//OS 6.9.0-ghost booting\n' +
+              'Nov 11 02:58:14 ghost-rig systemd[1]: Started OpenSSH client agent.\n' +
+              `Nov 11 02:58:15 ghost-rig neon-uplink[611]: tunnel up via ${gatewayIp.replace(/\.\d+$/, '.x')} (encrypted)\n` +
+              'Nov 11 02:58:16 ghost-rig trace-monitor[640]: SOC heuristics loaded, watching outbound noise\n',
+          ),
+        }),
+      }),
       home: dir({
         ghost: dir({
+          '.bash_history': bashHistory(['ls', 'cat readme.txt', 'cd notes', 'cat breach-cheatsheet.txt', 'cd ~', 'mail']),
+          '.ssh': dir({
+            config: file('Host relay\n    HostName relay.neon.sim\n    User ghost\n    IdentityFile ~/.ssh/id_ed25519\n'),
+            known_hosts: file('relay.neon.sim ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAISIMULATEDHOSTKEY\n'),
+            id_ed25519: file('-----BEGIN OPENSSH PRIVATE KEY-----\n(simulated key material: nothing real lives in this game)\n-----END OPENSSH PRIVATE KEY-----\n'),
+            'id_ed25519.pub': file('ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAISIMULATEDPUBLICKEY ghost@ghost-rig\n'),
+          }),
+          cases: dir({
+            'README.txt': file(
+              'CASES // blue-team scratch space\n' +
+                'Defense shifts drop their evidence here: auth logs, allowlists, ticket notes.\n' +
+                'Try: ls -la, find ~/cases -name "*.log", less <file>\n',
+            ),
+          }),
           'readme.txt': file(
             'ghost-rig // personal deck\n' +
               'Type `help` for commands, `hint` if you are stuck, `mail` for jobs.\n' +
@@ -137,6 +185,26 @@ export function homeHost(gatewayIp: string): Host {
                 '4. sshbrute / webscan    crack the required ports (watch RAM)\n' +
                 '5. getroot <ip>          admin access\n' +
                 '6. connect, loot, dc     and keep the trace low\n',
+            ),
+            'shell-survival.txt': file(
+              'SHELL SURVIVAL // when you are lost\n' +
+                'pwd            where am I?\n' +
+                'cd ~           go home\n' +
+                'cd -           back to the last directory\n' +
+                'ls -la         everything here, hidden files too\n' +
+                'tree -L 2      the shape of this folder\n' +
+                'find . -name "*.log"   hunt for a file by name\n' +
+                'history / !n   re-run something you typed before\n' +
+                'help lost      recent dirs + the next step\n',
+            ),
+            'soc-glossary.txt': file(
+              'SOC GLOSSARY\n' +
+                'IOC   indicator of compromise: an IP, hash or domain tied to an attack\n' +
+                'TP    true positive: the alert was real\n' +
+                'FP    false positive: the alert fired on harmless activity\n' +
+                'SLA   how fast a ticket must be handled, by severity\n' +
+                'L1/L2 tier 1 triages, tier 2 investigates deeper\n' +
+                'SIEM  the log search platform (Splunk, Sentinel, Elastic)\n',
             ),
           }),
         }),
@@ -179,9 +247,14 @@ export function generateWorld(seed: number): World {
     account: { user: gwUser, pass: gwPass, isDefault: true },
     credsFound: false,
     fs: dir({
-      etc: dir({ motd: file(`${org.name} edge gateway. Authorized use only.\n`) }),
+      etc: etcBase(`${org.slug}-gw`, [{ name: 'admin', uid: 1000 }], `${org.name} edge gateway. Authorized use only.\n`, {
+        ssh: dir({
+          sshd_config: file('Port 22\nPermitRootLogin no\nPasswordAuthentication yes   # TODO: keys only\nMaxAuthTries 6\n'),
+        }),
+      }),
       home: dir({
         admin: dir({
+          '.bash_history': bashHistory(['sudo systemctl restart nginx', 'tail -n 50 /var/log/auth.log', 'passwd   # never finished this', 'exit']),
           'todo.txt': file(
             '- rotate the admin password (still the factory default, oops)\n' +
               '- finance box firewall only trusts THIS gateway. keep it that way\n' +
@@ -189,7 +262,12 @@ export function generateWorld(seed: number): World {
           ),
         }),
       }),
-      var: dir({ log: dir({ 'auth.log': file(authLog(rng, `${org.slug}-gw`, rng.pick(EXTERNAL_NOISE), socIp, 'admin')) }) }),
+      var: dir({
+        log: dir({
+          'auth.log': file(authLog(rng, `${org.slug}-gw`, rng.pick(EXTERNAL_NOISE), socIp, 'admin')),
+          syslog: file(`Nov 11 03:00:01 ${org.slug}-gw CRON[402]: (root) CMD (run-parts /etc/cron.hourly)\nNov 11 03:02:44 ${org.slug}-gw nginx[733]: worker process started\n`),
+        }),
+      }),
     }),
   };
 
@@ -216,7 +294,13 @@ export function generateWorld(seed: number): World {
     account: { user: socUser, pass: socPass, isDefault: false },
     credsFound: false,
     fs: dir({
-      etc: dir({ motd: file('SOC log collector. All sessions are recorded.\n') }),
+      etc: etcBase(`${org.slug}-soc`, [{ name: socUser, uid: 1001 }], 'SOC log collector. All sessions are recorded.\n'),
+      home: dir({
+        [socUser]: dir({
+          '.bash_history': bashHistory(['grep -c Failed /var/log/auth.log', 'less /var/log/auth.log', 'find / -name "*.log"', 'exit']),
+          'shift-notes.txt': file('Night shift: auth.log on this box is the source of truth for SSH logins.\nFailed lines are noise unless they end in an Accepted.\n'),
+        }),
+      }),
       var: dir({
         log: dir({
           'auth.log': file(authLog(rng, `${org.slug}-soc`, attackerIp, gatewayIp, socUser)),
@@ -268,7 +352,12 @@ export function generateWorld(seed: number): World {
     account: { user: finUser, pass: finPass, isDefault: false },
     credsFound: false,
     fs: dir({
-      etc: dir({ motd: file(`${org.name} finance. PCI scope. Unauthorized access is prosecuted.\n`) }),
+      etc: etcBase(`${org.slug}-fin`, [{ name: finUser, uid: 1002 }], `${org.name} finance. PCI scope. Unauthorized access is prosecuted.\n`),
+      home: dir({
+        [finUser]: dir({
+          '.bash_history': bashHistory(['cd /srv/finance', 'ls -l', 'sqlite3 payroll.db ".tables"', 'exit']),
+        }),
+      }),
       srv: dir({
         finance: dir({
           'payroll.db': file(

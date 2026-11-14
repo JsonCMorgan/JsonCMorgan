@@ -2,7 +2,7 @@ import type { Game } from '../engine/game';
 import { cwdBreadcrumb, displayPath, type FsVizModel } from '../engine/fsviz';
 import { esc } from './panels';
 
-export type FsVizAnim = { kind: 'ls' | 'cd'; key: number };
+export type FsVizAnim = { kind: 'ls' | 'cd' | 'find' | 'cat'; key: number };
 
 export function fsVizHtml(model: FsVizModel | null, anim: FsVizAnim | null): string {
   if (!model) {
@@ -19,7 +19,8 @@ export function fsVizHtml(model: FsVizModel | null, anim: FsVizAnim | null): str
     })
     .join('<span class="fsviz-crumb-sep">▸</span>');
 
-  const folderOpen = anim?.kind === 'ls';
+  const folderOpen = anim?.kind === 'ls' || anim?.kind === 'find' || anim?.kind === 'cat';
+  const lit = new Set(model.highlight ?? []);
   const cdHop = anim?.kind === 'cd';
   const animKey = anim?.key ?? 0;
 
@@ -38,7 +39,8 @@ export function fsVizHtml(model: FsVizModel | null, anim: FsVizAnim | null): str
               inCwd && e.kind === 'dir' && model.cwd.endsWith('/' + e.name)
                 ? ' here'
                 : '';
-            return `<div class="fsviz-entry ${e.kind}${here}" title="${esc(e.name)}">
+            const hit = lit.has(e.name) ? ' hit' : '';
+            return `<div class="fsviz-entry ${e.kind}${here}${hit}" title="${esc(e.name)}">
               <span class="fsviz-glyph">${e.kind === 'dir' ? '▣' : '▤'}</span>
               <span class="fsviz-name">${esc(e.name)}${e.kind === 'dir' ? '/' : ''}</span>
             </div>`;
@@ -58,9 +60,17 @@ export function fsVizHtml(model: FsVizModel | null, anim: FsVizAnim | null): str
       </div>
     </div>
   </div>
-  <div class="dim fsviz-hint">${folderOpen ? 'ls · listing' : cdHop ? 'cd · path change' : 'ls and cd update this panel'}</div>`;
+  <div class="dim fsviz-hint">${FSVIZ_HINT[anim?.kind ?? 'idle']}${lit.size ? ` · ${lit.size} lit` : ''}</div>`;
 }
 
-export function gameFsVizModel(g: Game, listPath?: string): FsVizModel | null {
-  return g.filesystemSnapshot(listPath);
+const FSVIZ_HINT: Record<FsVizAnim['kind'] | 'idle', string> = {
+  ls: 'ls · listing',
+  cd: 'cd · path change',
+  find: 'find · matches lit',
+  cat: 'cat / less · file opened',
+  idle: 'ls, cd, cat, less and find update this panel',
+};
+
+export function gameFsVizModel(g: Game, listPath?: string, view: { highlight?: string[]; showHidden?: boolean } = {}): FsVizModel | null {
+  return g.filesystemSnapshot(listPath, view);
 }

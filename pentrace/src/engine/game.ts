@@ -47,8 +47,9 @@ import { effectiveHintLevel } from './storage';
 import { parseLine, parseOpts, ParseError } from './parser';
 import { defaultRegistry, ToolContext, ToolDef, ToolRegistry } from './tools';
 import { StepCtx, TUTORIAL_PAY_FIRST, TUTORIAL_PAY_REPLAY, TUTORIAL_STEPS } from './tutorial';
-import { displayPath, entriesFromDir, type FsVizModel } from './fsviz';
+import { displayPath, entriesFromDir, findFocus, type FsVizModel } from './fsviz';
 import { FsError, resolvePath, VFS } from './vfs';
+import { expandHistory, fileTypeLine, findPaths, isHidden, lsLines, shortFlags, ShellError, statLines, treeLines } from './shell-explore';
 
 export const BASE_RAM = 512;
 export const HEAT_DECAY_PER_SEC = 0.8;
@@ -112,7 +113,33 @@ export interface RunState {
   runStanding: Partial<Record<import('./progression').FixerId, number>>;
   /** L1 SOC preview / M7 defense shift state */
   defense?: DefenseRunState;
+  /** Shell navigation memory per host ip: OLDPWD for cd -, the pushd stack, recent dirs for help lost. */
+  nav?: Record<string, NavState>;
 }
+
+export interface NavState {
+  prev: string | null;
+  stack: string[];
+  recent: string[];
+}
+
+/** What the last command looked at, so the FILESYSTEM panel can follow along. */
+export interface FsTouch {
+  kind: 'ls' | 'cd' | 'find' | 'cat';
+  listPath?: string;
+  highlight: string[];
+  showHidden?: boolean;
+}
+
+export interface PagerRequest {
+  title: string;
+  lines: string[];
+  /** more quits when you page past the end; less waits for q. */
+  quitAtEnd: boolean;
+}
+
+/** Consecutive "No such file" errors before GUIDE suggests pwd / cd ~. */
+export const LOST_STREAK = 3;
 
 export interface SaveData {
   profile: Profile;
@@ -127,6 +154,7 @@ export interface GameOptions {
 }
 
 type Cmd = (args: string[], stdin: string[] | null) => string[];
+type FsCtx = { vfs: VFS; cwd: string; host: Host; setCwd: (p: string) => void };
 
 class CmdError extends Error {}
 
@@ -163,6 +191,13 @@ export class Game {
   offenseStash: SaveData | null = null;
   private lastLine: string | undefined;
   private tabUsed = false;
+  /** Shell history for `history` and `!n` (this session). */
+  cmdHistory: string[] = [];
+  /** Consecutive "No such file or directory" errors; resets on any successful command. */
+  lostStreak = 0;
+  private pendingPager: PagerRequest | null = null;
+  private fsTouch: FsTouch | null = null;
+  private lastInPipe = true;
 
   constructor(save?: SaveData | null, seed = Date.now() % 1_000_000, opts: GameOptions = {}) {
     this.registry = defaultRegistry();
@@ -682,6 +717,12 @@ export class Game {
     if (this.run.defense?.outcome === 'lost_sla' && !line.trim().startsWith('defense')) {
       return [c.red('SLA breached. defense exit to retry.')];
     }
+    this.fsTouch = null;
+    this.pendingPager = null;
+    const expanded = expandHistory(line, this.cmdHistory);
+    if (expanded && 'error' in expanded) return [c.red(expanded.error)];
+    const echo = expanded ? [c.dim(expanded.line)] : [];
+    if (expanded) line = expanded.line;
     let pipeline;
     try {
       pipeline = parseLine(line.trim());
@@ -689,6 +730,8 @@ export class Game {
       return [c.red(`neosh: ${(e as ParseError).message}`)];
     }
     if (!pipeline.length) return [];
+    this.cmdHistory.push(line.trim());
+    if (this.cmdHistory.length > 500) this.cmdHistory.shift();
     const prevLine = this.lastLine;
     this.lastLine = line.trim();
     const ownedBefore = this.profile.owned.length;
@@ -697,6 +740,7 @@ export class Game {
     try {
       for (let i = 0; i < pipeline.length; i++) {
         const { name, args } = pipeline[i];
+        this.lastInPipe = i === pipeline.length - 1;
         if (this.run.defense && (name in { tickets: 1, ticket: 1, socsearch: 1, disposition: 1, soc: 1 } || (name === 'submit' && args[0] === 'defense'))) {
           out = runDefenseCommand(this, name, args);
         } else if (this.run.defense && this.registry.get(name)) {
@@ -720,9 +764,20 @@ export class Game {
         if (i < pipeline.length - 1) stdin = out.map(stripAnsi);
       }
     } catch (e) {
-      if (e instanceof CmdError || e instanceof FsError || e instanceof DefenseCmdError) {
+      if (e instanceof CmdError || e instanceof FsError || e instanceof DefenseCmdError || e instanceof ShellError) {
         this.emit({ type: 'sound', sound: 'error' });
-        const out = [c.red(e.message)];
+        this.fsTouch = null;
+        this.pendingPager = null;
+        const out = [...echo, c.red(e.message)];
+        if (/No such file or directory|cannot access|error opening dir/.test(e.message)) {
+          this.lostStreak++;
+          if (this.lostStreak === LOST_STREAK) {
+            out.push(
+              c.cyan('GUIDE ▸ ') +
+                `Lost? ${c.yellow('pwd')} shows where you are, ${c.yellow('cd ~')} goes home, ${c.yellow('ls')} shows what is here, ${c.yellow('help lost')} shows your recent dirs.`,
+            );
+          }
+        } else this.lostStreak = 0;
         if (this.run.tutorial) {
           const extra = this.tutorialCheck({
             line: line.trim(),
@@ -743,6 +798,8 @@ export class Game {
       }
       throw e;
     }
+    this.lostStreak = 0;
+    if (echo.length) out = [...echo, ...out];
     if (!this.run.defense) this.checkContracts();
     if (this.run.defense && pipeline.some((p) => p.name === 'grep' || p.name === 'cat')) {
       const joined = pipeline.flatMap((p) => p.args).join(' ');
@@ -792,7 +849,7 @@ export class Game {
   }
 
   /** Filesystem of the current host. Remote boxes need root. */
-  private fsCtx(): { vfs: VFS; cwd: string; host: Host; setCwd: (p: string) => void } {
+  private fsCtx(): FsCtx {
     const host = this.connectedHost ?? this.home;
     if (host.role !== 'home' && !host.root) err(`permission denied: you are a guest on ${host.hostname}. Breach it and getroot first.`);
     const remote = host.role !== 'home';
@@ -804,15 +861,77 @@ export class Game {
     };
   }
 
+  private navFor(ip: string): NavState {
+    this.run.nav ??= {};
+    return (this.run.nav[ip] ??= { prev: null, stack: [], recent: [] });
+  }
+
+  /** Every directory change goes through here so cd -, pushd and help lost stay accurate. */
+  private chdir(ctx: FsCtx, path: string, label = path) {
+    const node = ctx.vfs.get(path);
+    if (!node) err(`cd: ${label}: No such file or directory`);
+    if (node!.type !== 'dir') err(`cd: ${label}: Not a directory`);
+    const nav = this.navFor(ctx.host.ip);
+    if (path !== ctx.cwd) nav.prev = ctx.cwd;
+    ctx.setCwd(path);
+    nav.recent = [path, ...nav.recent.filter((p) => p !== path)].slice(0, 6);
+    this.fsTouch = { kind: 'cd', highlight: [] };
+  }
+
+  private dirsLine(ctx: FsCtx): string {
+    const nav = this.navFor(ctx.host.ip);
+    const home = ctx.host.role === 'home' ? '/home/ghost' : '';
+    return [ctx.cwd, ...nav.stack].map((p) => (home ? displayPath(p, home) : p)).join(' ');
+  }
+
+  private touchFile(abs: string, kind: FsTouch['kind'] = 'cat') {
+    const slash = abs.lastIndexOf('/');
+    this.fsTouch = { kind, listPath: abs.slice(0, slash) || '/', highlight: [abs.slice(slash + 1)] };
+  }
+
+  /** The UI calls this after exec: a less/more request to page instead of printing. */
+  takePager(): PagerRequest | null {
+    const p = this.pendingPager;
+    this.pendingPager = null;
+    return p;
+  }
+
+  takeFsTouch(): FsTouch | null {
+    const t = this.fsTouch;
+    this.fsTouch = null;
+    return t;
+  }
+
+  /** help lost: where you are, home, recent dirs and the next step. */
+  lostLines(): string[] {
+    const host = this.connectedHost ?? this.home;
+    const remote = host.role !== 'home';
+    const cwd = remote ? this.run.cwd : this.run.homeCwd;
+    const home = remote ? (host.root ? `/root (or /home/${host.account.user})` : '(guest: no shell home)') : '/home/ghost  (~)';
+    const recent = (this.run.nav?.[host.ip]?.recent ?? []).filter((p) => p !== cwd).slice(0, 3);
+    const h = this.nextHint();
+    return [
+      c.bold(c.cyan('LOST? // where you are')),
+      `  host     ${host.hostname}${remote ? c.dim(` (${host.ip}, ${host.root ? 'root' : 'guest'})`) : c.dim(' (your rig)')}`,
+      `  cwd      ${c.yellow(remote ? cwd : displayPath(cwd, '/home/ghost'))}`,
+      `  home     ${home}`,
+      `  recent   ${recent.length ? recent.map((p) => (remote ? p : displayPath(p, '/home/ghost'))).join('   ') : c.dim('(none yet)')}`,
+      '',
+      c.dim('  pwd  where am I · cd ~  go home · cd -  go back · ls -la  look around · tree -L 2  see the shape'),
+      `  next     ${h.text}${h.cmd ? '   ' + c.cyan(h.cmd) : ''}`,
+      ...(remote ? [c.dim('  dc returns your shell to your rig.')] : []),
+    ];
+  }
+
   /** Right-panel filesystem model; null when guest on an unowned remote host. */
-  filesystemSnapshot(listPath?: string): FsVizModel | null {
+  filesystemSnapshot(listPath?: string, opts: { highlight?: string[]; showHidden?: boolean } = {}): FsVizModel | null {
     try {
       const { vfs, cwd, host } = this.fsCtx();
       const target = listPath ?? cwd;
       const node = vfs.get(target);
       const homeAbs = '/home/ghost';
       let entries: FsVizModel['entries'] = [];
-      if (node?.type === 'dir') entries = entriesFromDir(node);
+      if (node?.type === 'dir') entries = entriesFromDir(node).filter((e) => opts.showHidden || !isHidden(e.name));
       else if (node?.type === 'file') {
         const name = target.split('/').pop() ?? target;
         entries = [{ name, kind: 'file' }];
@@ -824,6 +943,7 @@ export class Game {
         listPath: target,
         displayListPath: displayPath(target, homeAbs),
         entries,
+        highlight: opts.highlight ?? [],
       };
     } catch {
       return null;
@@ -937,8 +1057,9 @@ export class Game {
     const cmds: Record<string, Cmd> = {
       help: (args) => {
         if (!args.length) return formatHelpIndex();
+        if (args[0] === 'lost') return this.lostLines();
         const n = Number(args[0]);
-        if (!Number.isFinite(n)) err('usage: help [page]   try: help 5');
+        if (!Number.isFinite(n)) err('usage: help [page] | help lost   try: help 5');
         return formatHelpPage(n);
       },
       hints: (args) => {
@@ -975,40 +1096,84 @@ export class Game {
       pwd: () => [this.fsCtx().cwd],
       echo: (args) => [args.join(' ')],
       ls: (args) => {
-        const { vfs, cwd } = this.fsCtx();
-        const targets = args.filter((a) => !a.startsWith('-'));
-        const path = resolvePath(cwd, targets[0] ?? '.');
-        const node = vfs.get(path);
-        if (!node) err(`ls: cannot access '${targets[0]}': No such file or directory`);
-        if (node!.type === 'file') return [targets[0]];
-        const names = vfs.list(path);
-        if (!names.length) return [];
-        return [
-          names
-            .map((n) => {
-              const child = (node as { children: Record<string, { type: string }> }).children[n];
-              return child.type === 'dir' ? c.blue(c.bold(n + '/')) : n;
-            })
-            .join('  '),
-        ];
+        const { vfs, cwd, host } = this.fsCtx();
+        const { letters, rest } = shortFlags(args);
+        const out = lsLines(vfs, cwd, args, host.account.user);
+        const path = resolvePath(cwd, rest[0] ?? '.');
+        this.fsTouch = { kind: 'ls', listPath: vfs.get(path)?.type === 'dir' ? path : undefined, highlight: [], showHidden: letters.has('a') || letters.has('A') };
+        return out;
       },
       cd: (args) => {
         const ctx = this.fsCtx();
         const fallback = ctx.host.role === 'home' ? '/home/ghost' : '/';
-        const path = resolvePath(ctx.cwd, args[0] ?? fallback);
-        const node = ctx.vfs.get(path);
-        if (!node) err(`cd: ${args[0]}: No such file or directory`);
-        if (node!.type !== 'dir') err(`cd: ${args[0]}: Not a directory`);
-        ctx.setCwd(path);
+        if (args[0] === '-') {
+          const prev = this.navFor(ctx.host.ip).prev;
+          if (!prev) err('cd: OLDPWD not set (you have not changed directory yet)');
+          this.chdir(ctx, prev!);
+          return [ctx.host.role === 'home' ? displayPath(prev!, '/home/ghost') : prev!];
+        }
+        this.chdir(ctx, resolvePath(ctx.cwd, args[0] ?? fallback), args[0]);
         return [];
       },
+      pushd: (args) => {
+        const ctx = this.fsCtx();
+        if (!args[0]) err('pushd: no other directory (usage: pushd <dir>)');
+        const from = ctx.cwd;
+        this.chdir(ctx, resolvePath(from, args[0]), args[0]);
+        this.navFor(ctx.host.ip).stack.unshift(from);
+        return [this.dirsLine(this.fsCtx())];
+      },
+      popd: () => {
+        const ctx = this.fsCtx();
+        const nav = this.navFor(ctx.host.ip);
+        if (!nav.stack.length) err('popd: directory stack empty');
+        const to = nav.stack.shift()!;
+        this.chdir(ctx, to);
+        return [this.dirsLine(this.fsCtx())];
+      },
+      dirs: () => [this.dirsLine(this.fsCtx())],
+      tree: (args) => {
+        const { vfs, cwd } = this.fsCtx();
+        const out = treeLines(vfs, cwd, args);
+        const target = args.filter((a, i) => !a.startsWith('-') && args[i - 1] !== '-L')[0];
+        this.fsTouch = { kind: 'ls', listPath: resolvePath(cwd, target ?? '.'), highlight: [] };
+        return out;
+      },
+      find: (args) => {
+        const { vfs, cwd } = this.fsCtx();
+        const res = findPaths(vfs, cwd, args);
+        this.fsTouch = { kind: 'find', ...findFocus(res.paths, resolvePath(cwd, args[0] && !args[0].startsWith('-') ? args[0] : '.')) };
+        return res.lines;
+      },
+      file: (args) => {
+        if (!args.length) err('Usage: file <path>...');
+        const { vfs, cwd } = this.fsCtx();
+        return args.map((a) => fileTypeLine(vfs, cwd, a));
+      },
+      stat: (args) => {
+        if (!args.length) err("stat: missing operand. Try 'stat <path>'");
+        const { vfs, cwd, host } = this.fsCtx();
+        return args.flatMap((a) => statLines(vfs, cwd, a, host.account.user));
+      },
+      history: (args) => {
+        const n = args[0] ? Number(args[0]) : this.cmdHistory.length;
+        if (!Number.isInteger(n) || n < 0) err(`history: ${args[0]}: numeric argument required`);
+        const start = Math.max(0, this.cmdHistory.length - n);
+        return this.cmdHistory.slice(start).map((l, i) => `${String(start + i + 1).padStart(5)}  ${l}`);
+      },
+      less: (args, stdin) => this.pager('less', args, stdin),
+      more: (args, stdin) => this.pager('more', args, stdin),
       cat: (args, stdin) => {
         if (!args.length) return stdin ?? [];
         const { vfs, cwd } = this.fsCtx();
         const out: string[] = [];
         for (const a of args) {
-          const text = vfs.read(resolvePath(cwd, a)).replace(/\n$/, '');
+          const abs = resolvePath(cwd, a);
+          if (!vfs.get(abs)) err(`cat: ${a}: No such file or directory`);
+          if (vfs.get(abs)!.type === 'dir') err(`cat: ${a}: Is a directory`);
+          const text = vfs.read(abs).replace(/\n$/, '');
           if (text) out.push(...text.split('\n'));
+          this.touchFile(abs);
         }
         return out;
       },
@@ -1471,9 +1636,32 @@ export class Game {
     return lines;
   }
 
+  private pager(which: 'less' | 'more', args: string[], stdin: string[] | null): string[] {
+    const files = args.filter((a) => !a.startsWith('-'));
+    let lines: string[];
+    let title: string;
+    if (files.length) {
+      const { vfs, cwd } = this.fsCtx();
+      const node = vfs.get(resolvePath(cwd, files[0]));
+      if (!node) err(`${which}: ${files[0]}: No such file or directory`);
+      if (node!.type === 'dir') err(`${which}: ${files[0]} is a directory`);
+      lines = this.commands.cat(files.slice(0, 1), null).map(stripAnsi);
+      title = files[0];
+    } else if (stdin) {
+      lines = stdin;
+      title = '(stdin)';
+    } else err(`${which}: missing filename ("${which} --help" is not a thing here: try ${which} <file>)`);
+    if (!this.lastInPipe) return lines!;
+    this.pendingPager = { title: title!, lines: lines!, quitAtEnd: which === 'more' };
+    return [];
+  }
+
   private headTail(args: string[], stdin: string[] | null, which: 'head' | 'tail'): string[] {
+    const short = args.find((a) => /^-\d+$/.test(a));
+    if (short) args = ['-n', short.slice(1), ...args.filter((a) => a !== short)];
     const o = parseOpts(args, { withValue: ['-n'] });
     const n = Number(o.values['-n'] ?? 10);
+    if (!Number.isInteger(n) || n < 0) err(`${which}: invalid number of lines: '${o.values['-n']}'`);
     const src = stdin ?? this.commands.cat(o.positional, null);
     return which === 'head' ? src.slice(0, n) : src.slice(-n);
   }

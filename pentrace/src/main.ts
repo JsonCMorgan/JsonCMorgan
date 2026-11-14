@@ -32,8 +32,6 @@ import { morph } from './ui/morph';
 import { bindHotkeys, bindPressEnter } from './ui/prompt';
 import { advanceClock } from './engine/clock';
 import { commandDelayPlan } from './engine/command-delay';
-import { parseLine } from './engine/parser';
-import { resolvePath } from './engine/vfs';
 import { fsVizHtml, gameFsVizModel, type FsVizAnim } from './ui/fsviz-panel';
 import { GameTerminal } from './ui/terminal';
 import { TUTORIAL_STEPS } from './engine/tutorial';
@@ -89,36 +87,16 @@ let tutorialNudgeShown = false;
 
 let fsVizAnim: FsVizAnim | null = null;
 let fsVizListPath: string | undefined;
+let fsVizView: { highlight: string[]; showHidden: boolean } = { highlight: [], showHidden: false };
 
-function commandOutputIsError(out: string[]): boolean {
-  return out.some((l) => /^(ls|cd|permission denied|neosh):/.test(stripAnsi(l)));
-}
-
-/** Refresh filesystem panel in parallel with terminal word-reveal. */
-function bumpFsVizFromCommand(line: string, out: string[]) {
-  if (commandOutputIsError(out)) return;
-  let pipeline;
-  try {
-    pipeline = parseLine(line.trim());
-  } catch {
-    return;
-  }
-  if (pipeline.length !== 1) return;
-  const { name, args } = pipeline[0];
-  if (name === 'cd') {
-    fsVizListPath = undefined;
-    fsVizAnim = { kind: 'cd', key: Date.now() };
-    renderAll();
-    return;
-  }
-  if (name === 'ls') {
-    const snap = game.filesystemSnapshot();
-    if (!snap) return;
-    const targets = args.filter((a) => !a.startsWith('-'));
-    fsVizListPath = resolvePath(snap.cwd, targets[0] ?? '.');
-    fsVizAnim = { kind: 'ls', key: Date.now() };
-    renderAll();
-  }
+/** Refresh filesystem panel in parallel with terminal word-reveal, following whatever the command touched. */
+function bumpFsVizFromCommand() {
+  const touch = game.takeFsTouch();
+  if (!touch) return;
+  fsVizListPath = touch.listPath;
+  fsVizView = { highlight: touch.highlight, showHidden: !!touch.showHidden };
+  fsVizAnim = { kind: touch.kind, key: Date.now() };
+  renderAll();
 }
 
 function resetTutorialStuck() {
@@ -180,9 +158,11 @@ async function runCommand(line: string) {
   const beforeStep = game.run.tutorial?.step;
   const ipMatch = line.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g);
   const out = game.exec(line);
+  const pager = game.takePager();
   const plan = commandDelayPlan(line, out);
-  bumpFsVizFromCommand(line, out);
+  bumpFsVizFromCommand();
   await term.revealCommandOutput(out, plan, { tutorial: !!game.run.tutorial });
+  if (pager) await term.page(pager.lines, pager.title, pager.quitAtEnd);
   if (line.trim().startsWith('hints')) {
     prefs.hintLevel = game.profile.hintLevel ?? prefs.hintLevel;
     savePrefs();
@@ -301,14 +281,21 @@ function applyPhaseChrome() {
   $('#btn-defense')?.classList.toggle('active-defense', def);
 }
 
+let fsVizHostIp = '';
 function renderAll() {
   applyPhaseChrome();
+  const shellIp = game.connectedHost?.ip ?? game.world.homeIp;
+  if (shellIp !== fsVizHostIp) {
+    fsVizHostIp = shellIp;
+    fsVizListPath = undefined;
+    fsVizView = { highlight: [], showHidden: false };
+  }
   setHtml('#trace', traceHtml(game));
   setHtml('#ram', ramHtml(game));
   setHtml('#guide', guideHtml(game, prefs.tutorial));
   const focus = (focusIp && findHost(game.world, focusIp)) || game.connectedHost || game.home;
   setHtml('#target', targetHtml(game, focus));
-  setHtml('#fsviz', fsVizHtml(gameFsVizModel(game, fsVizListPath), fsVizAnim));
+  setHtml('#fsviz', fsVizHtml(gameFsVizModel(game, fsVizListPath, fsVizView), fsVizAnim));
   setHtml('#netmap', netmapHtml(game, focus?.ip ?? null));
   const unreadMail = game.run.mails.filter((m) => !m.read).length;
   const unreadIdx = Object.values(game.profile.index).filter((x) => !x.read).length;

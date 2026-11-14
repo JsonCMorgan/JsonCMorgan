@@ -4,7 +4,7 @@ import { CONTRACTS } from '../engine/content/contracts';
 import { INDEX_BY_ID, INDEX_ENTRIES } from '../engine/content/index-entries';
 import { SHOP_ITEMS } from '../engine/content/shop';
 import { TUTORIAL_PAY_FIRST, TUTORIAL_PAY_REPLAY, TUTORIAL_STEPS } from '../engine/tutorial';
-import type { Game } from '../engine/game';
+import { LOST_STREAK, type Game } from '../engine/game';
 import { findHost, Host, openPortCount } from '../engine/network';
 import {
   FIXERS,
@@ -114,7 +114,17 @@ export function ramHtml(g: Game): string {
     <div class="procs">${procs || '<div class="dim idle">idle. no processes running</div>'}</div>`;
 }
 
+function lostHtml(g: Game): string {
+  if (g.lostStreak < LOST_STREAK) return '';
+  return `<div class="guide-lost"><b>LOST?</b> A few paths in a row did not exist. Get your bearings:
+    <div><button class="chip" data-cmd="pwd">▸ pwd</button><button class="chip" data-cmd="cd ~">▸ cd ~</button><button class="chip" data-cmd="help lost">▸ help lost</button></div></div>`;
+}
+
 export function guideHtml(g: Game, tutorial: boolean): string {
+  return guideInnerHtml(g, tutorial) + lostHtml(g);
+}
+
+function guideInnerHtml(g: Game, tutorial: boolean): string {
   const h = g.nextHint();
   const t = g.run.tutorial;
   const def = g.run.defense;
