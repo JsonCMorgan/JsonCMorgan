@@ -1,0 +1,22 @@
+{
+  "id": "hullmite",
+  "display_name": "Hullmite",
+  "element": "kinetic",
+  "base_hp": 42,
+  "base_attack": 8,
+  "abilities": [
+    {
+      "id": "rivet_rush",
+      "name": "Rivet Rush",
+      "power": 12,
+      "kind": "physical"
+    },
+    {
+      "id": "hull_polish",
+      "name": "Hull Polish",
+      "power": 0,
+      "kind": "buff_def"
+    }
+  ],
+  "bond_flavor": "It thinks the ship is its shell."
+}

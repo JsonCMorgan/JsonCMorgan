@@ -1,0 +1,12 @@
+{
+  "id": "cryptid",
+  "display_name": "Cryptid",
+  "element": "void",
+  "base_hp": 55,
+  "base_attack": 12,
+  "abilities": [
+    { "id": "shift", "name": "Shift", "power": 10, "kind": "physical" },
+    { "id": "aberrant_pulse", "name": "Aberrant Pulse", "power": 14, "kind": "physical" }
+  ],
+  "bond_flavor": "Only appears with Deep Scan contract."
+}

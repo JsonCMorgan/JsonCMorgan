@@ -1,0 +1,121 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8battlestub01"]
+
+[ext_resource type="Script" path="res://scripts/battle_stub.gd" id="1_battle"]
+
+[node name="BattleStub" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_battle")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.06, 0.07, 0.1, 1)
+
+[node name="Arena" type="ColorRect" parent="."]
+layout_mode = 1
+offset_left = 200.0
+offset_top = 80.0
+offset_right = 440.0
+offset_bottom = 200.0
+color = Color(0.18, 0.22, 0.28, 1)
+
+[node name="EnemyIcon" type="ColorRect" parent="."]
+layout_mode = 1
+offset_left = 300.0
+offset_top = 110.0
+offset_right = 340.0
+offset_bottom = 150.0
+color = Color(0.45, 0.85, 0.7, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.85, 1)
+theme_override_font_sizes/font_size = 16
+text = "ENCOUNTER — Hullmite (Phase 2a)"
+
+[node name="StatusRow" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="WildHpLabel" type="Label" parent="Margin/VBox/StatusRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Wild HP: -- / --"
+
+[node name="AllyHpLabel" type="Label" parent="Margin/VBox/StatusRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 12
+text = "Crew: --"
+
+[node name="ScanLabel" type="Label" parent="Margin/VBox/StatusRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.85, 0.75, 1)
+theme_override_font_sizes/font_size = 12
+text = "Scan: 0%"
+
+[node name="BattleLog" type="RichTextLabel" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/default_color = Color(0.78, 0.8, 0.82, 1)
+bbcode_enabled = true
+fit_content = false
+scroll_following = true
+
+[node name="Actions" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Attack" type="Button" parent="Margin/VBox/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Attack"
+
+[node name="Scan" type="Button" parent="Margin/VBox/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Scan"
+
+[node name="Bond" type="Button" parent="Margin/VBox/Actions"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Bond"
+
+[node name="Leave" type="Button" parent="Margin/VBox"]
+layout_mode = 2
+text = "Leave encounter"
+
+[connection signal="pressed" from="Margin/VBox/Actions/Attack" to="." method="_on_attack_pressed"]
+[connection signal="pressed" from="Margin/VBox/Actions/Scan" to="." method="_on_scan_pressed"]
+[connection signal="pressed" from="Margin/VBox/Actions/Bond" to="." method="_on_bond_pressed"]
+[connection signal="pressed" from="Margin/VBox/Leave" to="." method="_on_leave_pressed"]

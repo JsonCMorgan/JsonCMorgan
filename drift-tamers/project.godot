@@ -1,0 +1,34 @@
+; Engine configuration file.
+; Drift Tamers — Phase 1 scaffold (Godot 4.x)
+
+config_version=5
+
+[application]
+
+config/name="Drift Tamers"
+config/description="Sci-fi roguelite monster tamer — Phase 1 vertical slice scaffold."
+run/main_scene="res://scenes/ship_hub.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+GameState="*res://scripts/autoload/game_state.gd"
+
+[display]
+
+window/size/viewport_width=640
+window/size/viewport_height=360
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+window/stretch/scale_mode="integer"
+window/handheld/orientation=1
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method="gl_compatibility"
+2d/snap/snap_2d_transforms_to_pixel=true
+2d/snap/snap_2d_vertices_to_pixel=true

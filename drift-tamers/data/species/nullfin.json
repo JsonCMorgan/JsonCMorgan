@@ -1,0 +1,12 @@
+{
+  "id": "nullfin",
+  "display_name": "Nullfin",
+  "element": "void",
+  "base_hp": 36,
+  "base_attack": 11,
+  "abilities": [
+    { "id": "phase_bite", "name": "Phase Bite", "power": 12, "kind": "physical" },
+    { "id": "sensor_glitch", "name": "Sensor Glitch", "power": 0, "kind": "debuff" }
+  ],
+  "bond_flavor": "Shows on scan, not cameras."
+}
