@@ -3,8 +3,8 @@ import { stripAnsi } from './ansi';
 /** Target words per second before context multipliers (clamped to 8–14). */
 export const DEFAULT_WPS = 11;
 
-/** Applied when `game.run.tutorial` is active (pedagogical pacing). */
-export const TUTORIAL_WPS_MULTIPLIER = 0.78;
+/** Applied when `game.run.tutorial` is active (~6 WPS before dialogue modifiers). */
+export const TUTORIAL_WPS_MULTIPLIER = 0.55;
 
 /** Extra slowdown when line looks like Vex / mission narrative. */
 export const DIALOGUE_WPS_MULTIPLIER = 0.88;
@@ -13,7 +13,9 @@ export const DIALOGUE_WPS_MULTIPLIER = 0.88;
 export const SCAN_TABLE_WPS_MULTIPLIER = 1.22;
 
 const WPS_MIN = 8;
+const WPS_MIN_TUTORIAL = 5;
 const WPS_MAX = 14;
+const WPS_MAX_TUTORIAL = 9;
 
 // eslint-disable-next-line no-control-regex
 const ANSI_RE = /^\x1b\[[0-9;]*m/;
@@ -67,7 +69,9 @@ export function wordsPerSecond(ctx: RevealPacingContext): number {
   if (ctx.tutorial) wps *= TUTORIAL_WPS_MULTIPLIER;
   if (DIALOGUE_MARKERS.test(plain)) wps *= DIALOGUE_WPS_MULTIPLIER;
   if (SCAN_TABLE_MARKERS.test(plain)) wps *= SCAN_TABLE_WPS_MULTIPLIER;
-  return Math.min(WPS_MAX, Math.max(WPS_MIN, wps));
+  const lo = ctx.tutorial ? WPS_MIN_TUTORIAL : WPS_MIN;
+  const hi = ctx.tutorial ? WPS_MAX_TUTORIAL : WPS_MAX;
+  return Math.min(hi, Math.max(lo, wps));
 }
 
 export function delayMsPerWord(wps: number): number {

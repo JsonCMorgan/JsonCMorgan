@@ -791,6 +791,169 @@ button {
   }
 }
 
+/* filesystem viz */
+.fsviz {
+  min-height: 0;
+  flex-shrink: 0;
+  max-height: 240px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-color: rgba(57, 255, 156, 0.35);
+  box-shadow: 0 0 20px rgba(57, 255, 156, 0.08) inset;
+}
+.fsviz-host {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.fsviz-host b {
+  color: var(--cyan);
+}
+.fsviz-crumbbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  padding: 4px 6px;
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  background: rgba(0, 240, 255, 0.04);
+}
+.fsviz-crumb {
+  color: var(--dim);
+  transition: color 0.25s, text-shadow 0.25s;
+}
+.fsviz-crumb.active {
+  color: var(--yellow);
+  text-shadow: 0 0 8px var(--yellow);
+}
+.fsviz-crumb-sep {
+  color: rgba(0, 240, 255, 0.45);
+  font-size: 9px;
+}
+.fsviz-crumbbar.fsviz-cd-hop .fsviz-crumb.active {
+  animation: fsviz-crumb-hop 0.65s ease-out;
+}
+@keyframes fsviz-crumb-hop {
+  0% {
+    transform: translateY(-4px);
+    color: var(--magenta);
+  }
+  50% {
+    text-shadow: 0 0 14px var(--magenta);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.fsviz-stage {
+  flex: 1;
+  min-height: 88px;
+  perspective: 420px;
+}
+.fsviz-folder {
+  position: relative;
+  border: 1px solid rgba(249, 240, 2, 0.35);
+  background: rgba(249, 240, 2, 0.03);
+  padding: 8px;
+  transform-style: preserve-3d;
+  transition: box-shadow 0.35s, border-color 0.35s;
+}
+.fsviz-folder-lid {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  right: 8px;
+  height: 6px;
+  background: linear-gradient(90deg, var(--yellow), var(--cyan));
+  opacity: 0.55;
+  transform-origin: top center;
+  transition: transform 0.45s ease-out;
+}
+.fsviz-folder-body {
+  margin-top: 10px;
+}
+.fsviz-folder-label {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.fsviz-folder.fsviz-folder-open {
+  border-color: var(--cyan);
+  box-shadow: 0 0 22px rgba(0, 240, 255, 0.35);
+}
+.fsviz-folder.fsviz-folder-open .fsviz-folder-lid {
+  transform: rotateX(-48deg) translateY(-2px);
+  opacity: 1;
+}
+.fsviz-entries {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+  max-height: 96px;
+  overflow-y: auto;
+}
+.fsviz-folder.fsviz-folder-open .fsviz-entry {
+  animation: fsviz-entry-in 0.4s ease-out backwards;
+}
+.fsviz-folder.fsviz-folder-open .fsviz-entry:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.fsviz-folder.fsviz-folder-open .fsviz-entry:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.fsviz-folder.fsviz-folder-open .fsviz-entry:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.fsviz-folder.fsviz-folder-open .fsviz-entry:nth-child(4) {
+  animation-delay: 0.2s;
+}
+@keyframes fsviz-entry-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+}
+.fsviz-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  font-size: 9px;
+  text-align: center;
+  word-break: break-all;
+}
+.fsviz-entry.dir {
+  border-color: rgba(0, 240, 255, 0.45);
+  color: var(--cyan);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+}
+.fsviz-entry.dir.here {
+  border-color: var(--magenta);
+  box-shadow: 0 0 12px rgba(255, 43, 214, 0.4);
+}
+.fsviz-entry.file {
+  color: var(--text);
+}
+.fsviz-glyph {
+  font-size: 14px;
+  line-height: 1;
+}
+.fsviz-hint {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+.fsviz-empty,
+.fsviz-empty-dir {
+  font-size: 10px;
+  padding: 8px 0;
+}
+
 /* netmap */
 .netmap {
   flex: 1;

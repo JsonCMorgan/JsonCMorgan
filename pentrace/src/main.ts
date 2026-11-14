@@ -32,6 +32,9 @@ import { morph } from './ui/morph';
 import { bindHotkeys, bindPressEnter } from './ui/prompt';
 import { advanceClock } from './engine/clock';
 import { commandDelayPlan } from './engine/command-delay';
+import { parseLine } from './engine/parser';
+import { resolvePath } from './engine/vfs';
+import { fsVizHtml, gameFsVizModel, type FsVizAnim } from './ui/fsviz-panel';
 import { GameTerminal } from './ui/terminal';
 import { TUTORIAL_STEPS } from './engine/tutorial';
 import { TRAINING_INTRUDER_IP, TRAINING_VAULT_IP } from './engine/network';
@@ -83,6 +86,40 @@ let shownCredits = game.profile.credits;
 let tutorialStuckSec = 0;
 let tutorialStuckStep = -1;
 let tutorialNudgeShown = false;
+
+let fsVizAnim: FsVizAnim | null = null;
+let fsVizListPath: string | undefined;
+
+function commandOutputIsError(out: string[]): boolean {
+  return out.some((l) => /^(ls|cd|permission denied|neosh):/.test(stripAnsi(l)));
+}
+
+/** Refresh filesystem panel in parallel with terminal word-reveal. */
+function bumpFsVizFromCommand(line: string, out: string[]) {
+  if (commandOutputIsError(out)) return;
+  let pipeline;
+  try {
+    pipeline = parseLine(line.trim());
+  } catch {
+    return;
+  }
+  if (pipeline.length !== 1) return;
+  const { name, args } = pipeline[0];
+  if (name === 'cd') {
+    fsVizListPath = undefined;
+    fsVizAnim = { kind: 'cd', key: Date.now() };
+    renderAll();
+    return;
+  }
+  if (name === 'ls') {
+    const snap = game.filesystemSnapshot();
+    if (!snap) return;
+    const targets = args.filter((a) => !a.startsWith('-'));
+    fsVizListPath = resolvePath(snap.cwd, targets[0] ?? '.');
+    fsVizAnim = { kind: 'ls', key: Date.now() };
+    renderAll();
+  }
+}
 
 function resetTutorialStuck() {
   const t = game.run.tutorial;
@@ -144,6 +181,7 @@ async function runCommand(line: string) {
   const ipMatch = line.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g);
   const out = game.exec(line);
   const plan = commandDelayPlan(line, out);
+  bumpFsVizFromCommand(line, out);
   await term.revealCommandOutput(out, plan, { tutorial: !!game.run.tutorial });
   if (line.trim().startsWith('hints')) {
     prefs.hintLevel = game.profile.hintLevel ?? prefs.hintLevel;
@@ -270,6 +308,7 @@ function renderAll() {
   setHtml('#guide', guideHtml(game, prefs.tutorial));
   const focus = (focusIp && findHost(game.world, focusIp)) || game.connectedHost || game.home;
   setHtml('#target', targetHtml(game, focus));
+  setHtml('#fsviz', fsVizHtml(gameFsVizModel(game, fsVizListPath), fsVizAnim));
   setHtml('#netmap', netmapHtml(game, focus?.ip ?? null));
   const unreadMail = game.run.mails.filter((m) => !m.read).length;
   const unreadIdx = Object.values(game.profile.index).filter((x) => !x.read).length;

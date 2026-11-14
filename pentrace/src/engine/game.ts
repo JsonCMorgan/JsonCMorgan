@@ -47,6 +47,7 @@ import { effectiveHintLevel } from './storage';
 import { parseLine, parseOpts, ParseError } from './parser';
 import { defaultRegistry, ToolContext, ToolDef, ToolRegistry } from './tools';
 import { StepCtx, TUTORIAL_PAY_FIRST, TUTORIAL_PAY_REPLAY, TUTORIAL_STEPS } from './tutorial';
+import { displayPath, entriesFromDir, type FsVizModel } from './fsviz';
 import { FsError, resolvePath, VFS } from './vfs';
 
 export const BASE_RAM = 512;
@@ -801,6 +802,32 @@ export class Game {
       cwd: remote ? this.run.cwd : this.run.homeCwd,
       setCwd: (p) => (remote ? (this.run.cwd = p) : (this.run.homeCwd = p)),
     };
+  }
+
+  /** Right-panel filesystem model; null when guest on an unowned remote host. */
+  filesystemSnapshot(listPath?: string): FsVizModel | null {
+    try {
+      const { vfs, cwd, host } = this.fsCtx();
+      const target = listPath ?? cwd;
+      const node = vfs.get(target);
+      const homeAbs = '/home/ghost';
+      let entries: FsVizModel['entries'] = [];
+      if (node?.type === 'dir') entries = entriesFromDir(node);
+      else if (node?.type === 'file') {
+        const name = target.split('/').pop() ?? target;
+        entries = [{ name, kind: 'file' }];
+      }
+      return {
+        hostname: host.hostname,
+        cwd,
+        displayCwd: displayPath(cwd, homeAbs),
+        listPath: target,
+        displayListPath: displayPath(target, homeAbs),
+        entries,
+      };
+    } catch {
+      return null;
+    }
   }
 
   completions(partial: string): string[] {

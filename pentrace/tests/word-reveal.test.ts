@@ -38,13 +38,15 @@ describe('wordsPerSecond', () => {
     expect(wps).toBe(DEFAULT_WPS);
   });
 
-  it('slows during tutorial and Vex dialogue', () => {
+  it('slows during tutorial and Vex dialogue (~6 WPS tutorial)', () => {
     const base = wordsPerSecond({ line: 'type ls to list files' });
     const tut = wordsPerSecond({ tutorial: true, line: 'type ls to list files' });
     const vex = wordsPerSecond({ tutorial: true, line: 'Vex: run nmap on the gateway' });
     expect(tut).toBeLessThan(base);
     expect(vex).toBeLessThan(tut);
     expect(tut).toBeCloseTo(DEFAULT_WPS * TUTORIAL_WPS_MULTIPLIER, 1);
+    expect(tut).toBeGreaterThanOrEqual(5);
+    expect(tut).toBeLessThanOrEqual(7);
   });
 
   it('speeds slightly for scan-style tables', () => {
