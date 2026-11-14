@@ -33,14 +33,15 @@ import {
   xpProgress,
 } from './progression';
 import { formatHelpIndex, formatHelpPage } from './content/help';
-import { DefenseCmdError, runDefenseCommand } from './defense/commands';
+import { DEFENSE_COMMAND_NAMES, DefenseCmdError, markCaseFilesRead, runDefenseCommand } from './defense/commands';
 import {
   defenseNextHint,
   exitDefensePreview,
+  mountDefenseCaseFiles,
   startDefensePreview,
   tickDefense,
 } from './game-defense';
-import type { DefenseRunState } from './defense/state';
+import { initDefenseShift, type DefenseRunState } from './defense/state';
 import { findHost, generateTrainingWorld, generateWorld, Host, openPortCount, scanLinks, TRAINING_INTRUDER_IP, World } from './network';
 import type { HintPref } from './storage';
 import { effectiveHintLevel } from './storage';
@@ -212,6 +213,10 @@ export class Game {
       this.run = save.run;
       this.run.procs = [];
       this.run.runStanding ??= initRunStanding(this.profile);
+      if (this.run.defense && this.run.defense.version !== 2) {
+        this.run.defense = initDefenseShift();
+        mountDefenseCaseFiles(this);
+      }
       this.stash = save.stash ?? null;
       if (!this.profile.tutorialDone && !this.run.tutorial && opts.tutorial !== false) this.startTutorial();
     } else {
@@ -714,9 +719,6 @@ export class Game {
   // ---------------------------------------------------------------- command execution
   exec(line: string): string[] {
     if (this.run.traced) return [c.red('Connection severed. You have been traced.')];
-    if (this.run.defense?.outcome === 'lost_sla' && !line.trim().startsWith('defense')) {
-      return [c.red('SLA breached. defense exit to retry.')];
-    }
     this.fsTouch = null;
     this.pendingPager = null;
     const expanded = expandHistory(line, this.cmdHistory);
@@ -741,7 +743,7 @@ export class Game {
       for (let i = 0; i < pipeline.length; i++) {
         const { name, args } = pipeline[i];
         this.lastInPipe = i === pipeline.length - 1;
-        if (this.run.defense && (name in { tickets: 1, ticket: 1, socsearch: 1, disposition: 1, soc: 1 } || (name === 'submit' && args[0] === 'defense'))) {
+        if (this.run.defense && (DEFENSE_COMMAND_NAMES.has(name) || (name === 'submit' && args[0] === 'defense'))) {
           out = runDefenseCommand(this, name, args);
         } else if (this.run.defense && this.registry.get(name)) {
           err(`${name}: breach tools disabled on defense shift`);
@@ -801,10 +803,7 @@ export class Game {
     this.lostStreak = 0;
     if (echo.length) out = [...echo, ...out];
     if (!this.run.defense) this.checkContracts();
-    if (this.run.defense && pipeline.some((p) => p.name === 'grep' || p.name === 'cat')) {
-      const joined = pipeline.flatMap((p) => p.args).join(' ');
-      if (joined.includes('northpeak-auth')) this.markDefenseInvestigated();
-    }
+    if (this.run.defense) markCaseFilesRead(this.run.defense, pipeline.flatMap((p) => p.args));
     if (this.run.tutorial) {
       out = out.concat(
         this.tutorialCheck({
@@ -842,10 +841,6 @@ export class Game {
     const cwd = h.role === 'home' ? this.run.homeCwd.replace(/^\/home\/ghost/, '~') : this.run.cwd;
     const user = h.role === 'home' ? 'ghost' : h.root ? 'root' : 'guest';
     return `${c.magenta(user + '@' + h.hostname)}${c.dim(':')}${c.cyan(cwd)}${c.dim(h.root && h.role !== 'home' ? '# ' : '$ ')}`;
-  }
-
-  markDefenseInvestigated() {
-    if (this.run.defense) this.run.defense.investigated = true;
   }
 
   /** Filesystem of the current host. Remote boxes need root. */
@@ -968,6 +963,8 @@ export class Game {
     if (hostCmds.includes(cmd) || last.match(/^\d/)) {
       return this.world.hosts.filter((h) => h.discovered && h.role !== 'home').map((h) => h.ip).filter((ip) => ip.startsWith(last));
     }
+    if (cmd === 'ticket' && this.run.defense) return this.run.defense.tickets.map((t) => t.id).filter((i) => i.startsWith(last));
+    if (cmd === 'disposition') return ['fp', 'tp', 'escalate'].filter((i) => i.startsWith(last));
     if (cmd === 'buy') return SHOP_ITEMS.map((i) => i.id).filter((i) => i.startsWith(last));
     if (cmd === 'index') return Object.keys(this.profile.index).filter((i) => i.startsWith(last));
     if (cmd === 'man') return this.registry.all().map((t) => t.id).filter((i) => i.startsWith(last));
@@ -996,7 +993,7 @@ export class Game {
     const at = this.connectedHost;
     const running = (tool: string, ip: string) => r.procs.some((p) => p.toolId === tool && p.target === ip);
     if (r.traced) return { text: 'You were traced. Press ENTER to start a new op.' };
-    if (r.defense) return defenseNextHint(this);
+    if (r.defense) return defenseNextHint(this, reveal);
     if (r.tutorial) {
       const step = TUTORIAL_STEPS[r.tutorial.step];
       const cmd = typeof step.cmd === 'function' ? step.cmd(this) : step.cmd;
@@ -1197,7 +1194,6 @@ export class Game {
               const text = vfs.read(p);
               lines.push(...text.replace(/\n$/, '').split('\n').map((t) => ({ text: t, file: files.length > 1 ? f : undefined })));
               if (p.includes('/var/log/') && text.includes('sshd[')) this.unlockIndex('log-analysis');
-              if (p.includes('northpeak-auth')) this.markDefenseInvestigated();
             }
           }
         } else if (stdin) {

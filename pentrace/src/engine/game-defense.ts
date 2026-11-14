@@ -1,15 +1,25 @@
 import { c } from './ansi';
-import { defenseShiftMail, D1_MISSION, initDefenseRunD1, type DefenseRunState } from './defense/state';
+import {
+  activeTicket,
+  DEFENSE_MISSIONS,
+  DEFENSE_PLAYBOOK,
+  defenseShiftMail,
+  initDefenseShift,
+  MISSION_BY_TICKET,
+  PLAYBOOK_PATH,
+  type DefenseRunState,
+} from './defense/state';
 import type { Game, RunState } from './game';
 import type { GameEvent } from './events';
-import { file, VFS } from './vfs';
+import { VFS } from './vfs';
 import { generateWorld } from './network';
 import { initRunStanding } from './progression';
 
 export function mountDefenseCaseFiles(g: Game) {
   const vfs = new VFS(g.home.fs);
   vfs.mkdirp('/home/ghost/cases');
-  vfs.write(D1_MISSION.authLogPath, D1_MISSION.authLogLines.join('\n') + '\n');
+  vfs.write(PLAYBOOK_PATH, DEFENSE_PLAYBOOK.join('\n') + '\n');
+  for (const m of DEFENSE_MISSIONS) for (const f of m.caseFiles) vfs.write(f.path, f.lines.join('\n') + '\n');
 }
 
 export function startDefensePreview(g: Game): string[] {
@@ -22,18 +32,16 @@ export function startDefensePreview(g: Game): string[] {
   g.profile.nextSeed = (seed * 48271 + 11) % 2147483647;
   const world = generateWorld(seed);
   world.org = 'NorthPeak MSSP';
-  const defense = initDefenseRunD1();
-  g.run = freshOffenseRunStub(world, defense, g);
+  g.run = freshOffenseRunStub(world, initDefenseShift(), g);
   mountDefenseCaseFiles(g);
   g.run.mails = defenseShiftMail().map((m) => ({ ...m }));
   g.emitGameEvent({ type: 'newRun' });
   return [
-    c.green(c.bold('  ▸ L1 DEFENSE PREVIEW — training shift')),
-    c.dim('  Not story M7. Type mail, tickets, ticket BT-2026-0103, socsearch, disposition tp, submit defense <ioc>.'),
-    c.dim('  defense exit — return to offense'),
+    c.green(c.bold('  ▸ L1 DEFENSE SHIFT: three tickets in the queue')),
+    c.dim('  mail, then less ~/cases/playbook-l1.txt. Per ticket: ticket <id>, socsearch, disposition, note, submit defense.'),
+    c.dim('  defense exit returns to offense'),
   ];
 }
-
 export function exitDefensePreview(g: Game): string[] {
   if (!g.run.defense) return [c.dim('  Not in defense preview.')];
   g.profile.gamePhase = 'offense';
@@ -76,24 +84,37 @@ function freshOffenseRunStub(world: import('./network').World, defense: DefenseR
 export function tickDefense(g: Game, dt: number) {
   const d = g.run.defense;
   if (!d || d.outcome !== 'active') return;
-  d.slaRemainingSec = Math.max(0, d.slaRemainingSec - dt);
-  if (d.slaRemainingSec <= 0) {
-    d.outcome = 'lost_sla';
-    g.emitGameEvent({ type: 'toast', kind: 'danger', title: 'SLA BREACH', body: D1_MISSION.primaryTicket });
-    g.emitGameEvent({ type: 'print', lines: [c.red(c.bold('  ✗ SLA BREACH — CRITICAL ticket timed out while queue idle.'))] });
+  for (const t of d.tickets) {
+    if (t.status === 'closed' || t.slaMissed) continue;
+    t.slaRemainingSec = Math.max(0, t.slaRemainingSec - dt);
+    if (t.slaRemainingSec <= 0) {
+      t.slaMissed = true;
+      g.emitGameEvent({ type: 'toast', kind: 'danger', title: 'SLA BREACH', body: `${t.id} ${t.severity}` });
+      g.emitGameEvent({ type: 'print', lines: [c.red(c.bold(`  ✗ SLA BREACH on ${t.id}. Still work it: the summary will show it was late.`))] });
+    }
   }
 }
 
-export function defenseNextHint(g: Game): { text: string; cmd?: string } {
+/** reveal=false (GUIDE panel) never gives away the disposition or the IOC; the hint command does. */
+export function defenseNextHint(g: Game, reveal = false): { text: string; cmd?: string } {
   const d = g.run.defense!;
-  if (d.outcome === 'won') return { text: 'Shift clear. defense exit when ready.', cmd: 'defense exit' };
-  if (d.outcome === 'lost_sla') return { text: 'SLA blown. defense exit and retry with ?defense=1.', cmd: 'defense exit' };
-  if (d.outcome === 'lost_wrong') return { text: 'Wrong close. Re-read logs; disposition tp + correct IOC.', cmd: 'ticket BT-2026-0103' };
-  if (!g.run.mails.some((m) => !m.read)) return { text: 'Read handler mail.', cmd: 'mail' };
-  if (d.activeTicketId !== D1_MISSION.primaryTicket) return { text: 'Prioritize CRITICAL spray ticket.', cmd: 'ticket BT-2026-0103' };
-  if (!d.investigated) return { text: 'Investigate: socsearch or grep the case log.', cmd: 'socsearch' };
-  if (d.disposition !== 'tp') return { text: 'This is a true positive spray.', cmd: 'disposition tp' };
-  return { text: 'Document the external IOC.', cmd: `submit defense ${D1_MISSION.expectedIoc}` };
+  if (d.outcome === 'complete') return { text: 'Shift complete. Review the summary, then head back.', cmd: 'defense exit' };
+  if (g.run.mails.some((m) => !m.read)) return { text: 'Read the handler shift mail.', cmd: 'mail' };
+  const t = activeTicket(d);
+  if (!t || t.status !== 'working') {
+    const next = d.tickets.filter((x) => x.status !== 'closed').sort((a, b) => a.priority - b.priority)[0];
+    return { text: `Focus the highest-priority open ticket (${next.severity}).`, cmd: `ticket ${next.id}` };
+  }
+  const m = MISSION_BY_TICKET[t.id];
+  if (!t.investigated) return { text: 'Investigate before you decide: SIEM search first.', cmd: 'socsearch' };
+  if (!t.disposition && !reveal) return { text: 'Decide: tp, fp or escalate? The playbook says which fits. Type hint to be told.', cmd: 'less ~/cases/playbook-l1.txt' };
+  if (!t.disposition) {
+    const file = m.caseFiles[m.caseFiles.length - 1].path.replace('/home/ghost', '~');
+    return { text: `Check the evidence (${file}) against the playbook, then pick: ${m.expectedDisposition === 'tp' ? 'real attack on a server' : m.expectedDisposition === 'fp' ? 'expected activity' : 'possible account takeover'}.`, cmd: `disposition ${m.expectedDisposition}` };
+  }
+  if (t.disposition !== 'tp' && !t.notes.length) return { text: 'Write the analyst note: name the IP, user and time window.', cmd: reveal ? `note ${m.noteSuggestion}` : 'note <evidence>' };
+  if (t.disposition === 'tp') return { text: 'Document the external IOC to close it.', cmd: reveal ? `submit defense ${m.expectedIoc ?? '<ioc>'}` : 'submit defense <ioc>' };
+  return { text: 'Close the ticket with your note attached.', cmd: 'submit defense' };
 }
 
-export type { GameEvent };
+export type { GameEvent, DefenseRunState };

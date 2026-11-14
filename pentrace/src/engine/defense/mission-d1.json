@@ -1,42 +1,49 @@
 {
   "id": "d1-sla-spray",
+  "ticketId": "BT-2026-0103",
   "title": "SLA Race: Password Spray",
   "client": "NorthPeak",
-  "primaryTicket": "BT-2026-0103",
+  "expectedDisposition": "tp",
   "expectedIoc": "203.0.113.44",
   "mitre": "T1110.003",
   "slaMinutes": 12,
-  "handler": {
-    "from": "Handler Reeves",
-    "shiftSubject": "L1 SHIFT // NorthPeak MSSP (preview)",
-    "shiftBody": [
-      "Training shift only — not a 24/7 NOC.",
-      "Three tickets in queue. CRITICAL spray on NorthPeak must not breach SLA while you chase INFO noise.",
-      "Use tickets, socsearch, disposition, then submit defense <ioc> with TP set.",
-      "Type defense exit to return to offense preview."
-    ],
-    "triageBullets": [
-      "Pattern: failed SSH spray then single Accepted from one external IP.",
-      "Not a VPN flap — no matching change ticket.",
-      "Recommend: block source, force MFA, reset affected account.",
-      "Disposition: true_positive before you submit the IOC."
-    ]
-  },
+  "xp": 60,
   "socsearchOutput": [
     "search index=auth earliest=-4h client=NorthPeak",
     "| stats count by src_ip, action",
-    "| where action=\"Accepted\"",
     "",
     "src_ip          action    count",
-    "203.0.113.44    Accepted  1",
     "203.0.113.44    Failed    412",
+    "203.0.113.44    Accepted  1",
     "",
-    "NOTE: 412 failures followed by 1 success — classic password spray."
+    "NOTE: 412 failures followed by 1 success from one source: classic password spray."
   ],
-  "authLogPath": "/home/ghost/cases/northpeak-auth.log",
-  "authLogLines": [
-    "Mar 12 06:48:01 finance-ws-02 sshd[1842]: Failed password for admin from 203.0.113.44 port 44012 ssh2",
-    "Mar 12 06:48:02 finance-ws-02 sshd[1842]: Failed password for admin from 203.0.113.44 port 44012 ssh2",
-    "Mar 12 06:49:14 finance-ws-02 sshd[1842]: Accepted password for admin from 203.0.113.44 port 44012 ssh2"
+  "caseFiles": [
+    {
+      "path": "/home/ghost/cases/northpeak-auth.log",
+      "lines": [
+        "Mar 12 06:48:01 finance-ws-02 sshd[1842]: Failed password for admin from 203.0.113.44 port 44012 ssh2",
+        "Mar 12 06:48:02 finance-ws-02 sshd[1842]: Failed password for admin from 203.0.113.44 port 44012 ssh2",
+        "Mar 12 06:48:02 finance-ws-02 sshd[1843]: Failed password for invalid user oracle from 203.0.113.44 port 44013 ssh2",
+        "Mar 12 06:48:03 finance-ws-02 sshd[1844]: Failed password for root from 203.0.113.44 port 44014 ssh2",
+        "Mar 12 06:49:14 finance-ws-02 sshd[1842]: Accepted password for admin from 203.0.113.44 port 44012 ssh2",
+        "Mar 12 06:49:15 finance-ws-02 sshd[1842]: pam_unix(sshd:session): session opened for user admin by (uid=0)"
+      ]
+    }
+  ],
+  "noteEvidence": [
+    { "label": "source IP", "any": ["203.0.113.44"] },
+    { "label": "account", "any": ["admin"] },
+    { "label": "time window", "any": ["06:48", "06:49"] }
+  ],
+  "noteSuggestion": "spray from 203.0.113.44 against admin 06:48-06:49, 1 Accepted",
+  "wrong": {
+    "fp": "Closed as false positive, but the spray was real: hundreds of failures then an Accepted from one IP is textbook T1110.003.",
+    "escalate": "Escalated a ticket L1 owns. A server spray with a clear source is a true positive: document the IOC so the firewall team can block it."
+  },
+  "triageBullets": [
+    "Pattern: failed SSH spray then a single Accepted from one external IP.",
+    "No matching change ticket, so it is not a VPN flap.",
+    "Recommend: block the source, force MFA, reset the affected account."
   ]
 }

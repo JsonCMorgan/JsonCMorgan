@@ -10,22 +10,50 @@
       "status": "working"
     },
     {
-      "id": "BT-2026-0098",
+      "id": "BT-2026-0107",
       "client": "Contoso",
-      "priority": 4,
-      "severity": "INFO",
-      "title": "Defender routine scan",
-      "mitre": "T1082",
+      "priority": 2,
+      "severity": "HIGH",
+      "title": "Sign-in from new country after failures",
+      "mitre": "T1078.004",
       "status": "new"
     },
     {
       "id": "BT-2026-0101",
       "client": "Harbor",
-      "priority": 2,
+      "priority": 3,
       "severity": "MEDIUM",
-      "title": "Firewall deny burst",
+      "title": "Port scan burst at the edge firewall",
       "mitre": "T1046",
       "status": "new"
     }
-  ]
+  ],
+  "playbook": [
+    "L1 PLAYBOOK // NorthPeak MSSP (training shift)",
+    "",
+    "1. Work the queue by priority. Every ticket has its own SLA clock.",
+    "2. Investigate before you decide: socsearch, then grep / less the case files in ~/cases.",
+    "3. Pick a disposition:",
+    "   tp        Attack against a server with a clear external source. Document the IOC:",
+    "             submit defense <ip> so the firewall team can block it.",
+    "   fp        Alert fired on expected activity (approved scanner, change ticket).",
+    "             Close with a note that cites the evidence, then submit defense.",
+    "   escalate  A user account may be taken over (success after failures from a new",
+    "             country, odd hours). L2 owns containment. Write the escalation note",
+    "             (user, IP, country, time window), then submit defense.",
+    "4. note <text> attaches your analyst note to the focused ticket. Good notes name the",
+    "   evidence: IPs, usernames, times. Another analyst should not need to re-investigate.",
+    "5. shift shows your queue summary at any time."
+  ],
+  "handler": {
+    "from": "Handler Reeves",
+    "shiftSubject": "L1 SHIFT // NorthPeak MSSP (preview)",
+    "shiftBody": [
+      "Training shift. Three tickets in your queue, three clients, three different right answers.",
+      "Work them by priority. Each ticket has its own SLA clock in the left panel.",
+      "Read the playbook first: less ~/cases/playbook-l1.txt",
+      "Loop per ticket: ticket <id>, investigate (socsearch, grep, less), disposition, note, submit defense.",
+      "Type defense exit to return to offense."
+    ]
+  }
 }

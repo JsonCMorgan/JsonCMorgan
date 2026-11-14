@@ -246,6 +246,68 @@ export const INDEX_ENTRIES: IndexEntry[] = [
     ],
     related: ['log-analysis', 'the-trace'],
   },
+  {
+    id: 'false-positive-tuning',
+    title: 'False Positives & Alert Tuning',
+    category: 'Blue Team',
+    tier: 3,
+    unlockHint: 'Close an expected-activity alert as a false positive.',
+    realWorld: [
+      'A false positive is an alert that fired on harmless activity. Approved vulnerability scanners, backup jobs and admin scripts trip detection rules every day.',
+      'Analysts check context before deciding: an allowlist of approved scanner ranges, a change ticket (CHG-1234) that schedules the work, or the asset owner confirming it.',
+      'Too many false positives cause alert fatigue: analysts start skimming and miss the real attack. Tuning a rule (suppress a known source during a known window) fixes the root cause.',
+    ],
+    inGame: [
+      'Defense shift: the Harbor port-scan ticket. less ~/cases/scanner-allowlist.txt, confirm the IP is in the approved range and inside its window.',
+      'disposition fp, note the evidence (IP, range, change ticket), then submit defense.',
+    ],
+    defense: [
+      'Never suppress a whole alert type. Scope a tuning rule to the exact source range and time window, and review it when the change ticket expires.',
+      'An attacker can hide inside expected noise, so confirm the source really is the approved scanner (range, timing, behavior).',
+    ],
+    related: ['soc-disposition', 'port-scanning', 'analyst-notes'],
+  },
+  {
+    id: 'soc-escalation',
+    title: 'Escalation: L1 to L2',
+    category: 'Blue Team',
+    tier: 3,
+    mitre: 'T1078.004 Cloud Accounts',
+    unlockHint: 'Escalate a possible account takeover to L2.',
+    realWorld: [
+      'Tier 1 triages; Tier 2 investigates deeper and owns containment. Escalating is not failing: it is the correct move when a case needs authority or depth L1 does not have.',
+      'Classic escalation trigger: a user signs in successfully right after failures, from a country or device never seen before, at odd hours. That pattern suggests account takeover (ATO).',
+      'MFA fatigue: attackers spam push prompts until a tired user taps Approve. A new inbox forwarding rule right after login is a common next step.',
+    ],
+    inGame: [
+      'Defense shift: the Contoso sign-in ticket. Compare contoso-signin.log against the user baseline, then disposition escalate.',
+      'The note is the handoff. L2 should be able to act without re-investigating.',
+    ],
+    defense: [
+      'L2 contains: revoke sessions and tokens, reset the password, remove malicious inbox rules, check what was accessed, and call the user on a known number.',
+      'Prevent: phishing-resistant MFA (FIDO2), number matching on push, conditional access that blocks new countries.',
+    ],
+    related: ['soc-disposition', 'analyst-notes', 'weak-default-creds'],
+  },
+  {
+    id: 'analyst-notes',
+    title: 'Analyst Notes That Hold Up',
+    category: 'Blue Team',
+    tier: 2,
+    unlockHint: 'Attach a note to a ticket on a defense shift.',
+    realWorld: [
+      'Every ticket you close is read later: by L2, by QA, by an auditor, maybe by a court. The note is your evidence trail.',
+      'A good note answers who, what, when, where and why you decided: the user, the source IP, the time window, the log you checked, and the disposition reason.',
+      'Bad note: "looks fine, closing". Good note: "192.0.2.25 in approved scanner range 192.0.2.16/28 (CHG-4471), activity 02:14-02:54 inside Tue window. FP."',
+    ],
+    inGame: [
+      'note <text> attaches a note to the focused ticket. Scoring checks that it cites the key evidence (IPs, users, times); each item cited earns bonus XP.',
+    ],
+    defense: [
+      'Write the note as if the next analyst has never seen the case. Use exact values and UTC times, not "the weird IP".',
+    ],
+    related: ['soc-disposition', 'soc-escalation', 'false-positive-tuning'],
+  },
 ];
 
 export const INDEX_BY_ID = Object.fromEntries(INDEX_ENTRIES.map((e) => [e.id, e]));

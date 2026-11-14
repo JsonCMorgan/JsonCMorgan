@@ -1,5 +1,6 @@
 import { activeJobChecklist } from '../engine/contract-checklist';
 import { defenseChecklist } from '../engine/defense-checklist';
+import { activeTicket, MISSION_BY_TICKET } from '../engine/defense/state';
 import { CONTRACTS } from '../engine/content/contracts';
 import { INDEX_BY_ID, INDEX_ENTRIES } from '../engine/content/index-entries';
 import { SHOP_ITEMS } from '../engine/content/shop';
@@ -32,21 +33,20 @@ function checklistHtml(items: { label: string; done: boolean }[]): string {
 
 export function slaHtml(g: Game): string {
   const d = g.run.defense!;
-  const pct = (d.slaRemainingSec / d.slaTotalSec) * 100;
-  const level = pct <= 25 ? 'crit' : pct <= 50 ? 'hot' : pct <= 75 ? 'warm' : 'cool';
-  const label =
-    d.outcome === 'won'
-      ? 'SHIFT CLEAR'
-      : d.outcome === 'lost_sla'
-        ? 'SLA BREACH'
-        : d.outcome === 'lost_wrong'
-          ? 'REVIEW REQUIRED'
-          : pct <= 25
-            ? 'SLA CRITICAL'
-            : 'ON SHIFT';
-  const mins = Math.ceil(d.slaRemainingSec / 60);
+  const t = activeTicket(d);
+  if (d.outcome === 'complete' || !t) {
+    const ok = d.tickets.filter((x) => x.result?.correct).length;
+    return `
+    <div class="panel-title">SLA <span class="dim">// shift</span></div>
+    <div class="trace-readout cool"><span class="trace-pct">${ok}<small>/${d.tickets.length}</small></span><span class="trace-state">SHIFT COMPLETE</span></div>
+    <div class="dim">correct calls · type shift for the summary</div>`;
+  }
+  const pct = (t.slaRemainingSec / t.slaTotalSec) * 100;
+  const level = t.slaMissed || pct <= 25 ? 'crit' : pct <= 50 ? 'hot' : pct <= 75 ? 'warm' : 'cool';
+  const label = t.slaMissed ? 'SLA BREACH' : pct <= 25 ? 'SLA CRITICAL' : 'ON SHIFT';
+  const mins = Math.ceil(t.slaRemainingSec / 60);
   return `
-    <div class="panel-title">SLA <span class="dim">// ${d.activeTicketId}</span></div>
+    <div class="panel-title">SLA <span class="dim">// ${esc(t.id)}</span></div>
     <div class="trace-readout ${level}">
       <span class="trace-pct">${mins}<small>m</small></span>
       <span class="trace-state">${label}</span>
@@ -85,13 +85,14 @@ export function shiftHtml(g: Game): string {
   const d = g.run.defense!;
   const open = d.tickets.filter((t) => t.status !== 'closed').length;
   return `
-    <div class="panel-title">SHIFT <span class="dim">// L1 preview</span></div>
-    <div class="dim" style="margin-bottom:8px">Open tickets: <b>${open}</b> · Client mix: Contoso, NorthPeak, Harbor</div>
+    <div class="panel-title">SHIFT <span class="dim">// L1 queue</span></div>
+    <div class="dim" style="margin-bottom:8px">Open tickets: <b>${open}</b> of ${d.tickets.length}</div>
     <div class="job-checklist">${d.tickets
-      .map(
-        (t) =>
-          `<div class="check-row ${t.status === 'closed' ? 'done' : t.id === d.activeTicketId ? '' : ''}"><span class="check-box">${t.id === d.activeTicketId ? '▸' : '○'}</span><span>P${t.priority} ${esc(t.id)} · ${esc(t.severity)}</span></div>`,
-      )
+      .map((t) => {
+        const mark = t.status === 'closed' ? (t.result?.correct ? '✓' : '✗') : t.id === d.activeTicketId ? '▸' : '○';
+        const sla = t.status === 'closed' ? '' : t.slaMissed ? ' · LATE' : ` · ${Math.ceil(t.slaRemainingSec / 60)}m`;
+        return `<div class="check-row ${t.status === 'closed' ? 'done' : ''}"><span class="check-box">${mark}</span><span>P${t.priority} ${esc(t.id)} · ${esc(t.severity)}${sla}</span></div>`;
+      })
       .join('')}</div>`;
 }
 
@@ -162,7 +163,8 @@ export function targetHtml(g: Game, focus: Host | null): string {
     <div class="target-head"><div><div class="target-name">${active?.client ?? 'Queue'}</div><div class="target-ip">${esc(d.activeTicketId)}</div></div>
       <div class="badge root">L1 ANALYST</div></div>
     <p class="dim">${active ? esc(active.title) : 'Pick a ticket'}</p>
-    <p class="dim">socsearch · grep ~/cases/northpeak-auth.log · disposition · submit defense &lt;ioc&gt;</p>`;
+    <p class="dim">${active ? esc(MISSION_BY_TICKET[active.id]?.caseFiles.map((f) => f.path.replace('/home/ghost', '~')).join(' · ') ?? '') : ''}</p>
+    <p class="dim">socsearch · disposition · note · submit defense</p>`;
   }
   if (!focus) return `<div class="panel-title">TARGET</div><div class="dim">no target</div>`;
   const h = focus;
@@ -209,12 +211,12 @@ export function ticketsModalHtml(g: Game): string {
   const d = g.run.defense!;
   const cards = d.tickets
     .map((t) => {
-      const st = t.id === d.activeTicketId ? 'active' : t.status;
+      const st = t.status === 'closed' ? (t.result?.correct ? 'closed' : 'qa-flag') : t.id === d.activeTicketId ? 'active' : t.status;
       return `<div class="job-card ${st}"><div class="job-top"><span class="tag">${esc(t.id)} · ${esc(t.severity)}</span><span class="pay">P${t.priority}</span></div>
-      <div class="job-title">${esc(t.client)} — ${esc(t.title)}</div><div class="dim">${esc(t.mitre)}</div><div class="job-state">${st.toUpperCase()}</div></div>`;
+      <div class="job-title">${esc(t.client)} — ${esc(t.title)}</div><div class="dim">${esc(t.mitre)}</div><div class="job-state">${st.toUpperCase()}${t.status !== 'closed' ? ` · SLA ${t.slaMissed ? 'LATE' : Math.ceil(t.slaRemainingSec / 60) + 'm'}` : ''}</div></div>`;
     })
     .join('');
-  return `<div class="modal-head"><h3>MISSION QUEUE <span class="dim preview-badge">L1 PREVIEW</span></h3><button class="x" data-close>✕</button></div>
+  return `<div class="modal-head"><h3>MISSION QUEUE <span class="dim preview-badge">L1 SHIFT</span></h3><button class="x" data-close>✕</button></div>
     <div class="dim modal-sub">${checklistHtml(defenseChecklist(g))}</div>
     <div class="jobs-grid">${cards}</div>`;
 }

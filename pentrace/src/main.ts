@@ -536,7 +536,7 @@ async function boot(short = false) {
   }
   if (game.inDefenseMode) {
     banner('L1 DEFENSE SHIFT', 'defense');
-    term.writeRaw('\r\n' + c.green('>> SOC training shift (preview).') + c.dim(' TICKETS · socsearch · disposition tp · submit defense <ioc>') + '\r\n\r\n');
+    term.writeRaw('\r\n' + c.green('>> SOC training shift: 3 tickets in queue.') + c.dim(' mail · less ~/cases/playbook-l1.txt · ticket <id> · socsearch · disposition · note · submit defense') + '\r\n\r\n');
     term.locked = false;
     term.showPrompt();
     term.focus();
