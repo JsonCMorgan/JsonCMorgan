@@ -1,0 +1,66 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8shiphub001"]
+
+[ext_resource type="Script" path="res://scripts/ship_hub.gd" id="1_ship"]
+
+[node name="ShipHub" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ship")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.12, 0.14, 0.18, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.55, 1)
+theme_override_font_sizes/font_size = 22
+text = "Drift Tamers — Ship Hub"
+
+[node name="Flavor" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.82, 0.85, 0.88, 1)
+text = "The *Merrifield* smells like reheated protein and honest engines. Someone left a mug on the nav console again. Good."
+
+[node name="StatusLabel" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.65, 0.75, 0.85, 1)
+text = "..."
+
+[node name="Spacer" type="Control" parent="Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StartRun" type="Button" parent="Margin/VBox"]
+layout_mode = 2
+text = "Take contract — board derelict"
+
+[connection signal="pressed" from="Margin/VBox/StartRun" to="." method="_on_start_run_pressed"]
