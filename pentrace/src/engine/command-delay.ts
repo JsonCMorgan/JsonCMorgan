@@ -3,7 +3,7 @@ import { parseLine, type ParsedCommand } from './parser';
 export type CommandDelayPlan = {
   /** Milliseconds to show the busy animation before revealing output. */
   delayMs: number;
-  /** After the delay, print multi-line output one line at a time. */
+  /** Multi-line output (word reveal still runs per line in the terminal). */
   stream: boolean;
   /** Skip busy animation (terminal-only / UX exceptions). */
   instant: boolean;

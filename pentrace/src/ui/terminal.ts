@@ -1,7 +1,8 @@
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import { stripAnsi } from '../engine/ansi';
-import { type CommandDelayPlan, streamLineDelayMs } from '../engine/command-delay';
+import { type CommandDelayPlan } from '../engine/command-delay';
+import { delayMsPerWord, type RevealPacingContext, tokenizeRevealLine, wordsPerSecond } from '../engine/word-reveal';
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const WORK_FRAMES = ['▖', '▘', '▝', '▗'];
@@ -145,8 +146,47 @@ export class GameTerminal {
     this.term.write('\r\x1b[2K');
   }
 
-  /** Busy animation, then instant or streamed command output. Does not touch game events. */
-  async revealCommandOutput(lines: string[], plan: CommandDelayPlan) {
+  private async revealLineWordByWord(line: string, pacing: RevealPacingContext, wordsPrinted: number): Promise<number> {
+    if (!stripAnsi(line).trim()) {
+      this.term.write(line);
+      return wordsPrinted;
+    }
+    const wps = wordsPerSecond(pacing);
+    const delay = delayMsPerWord(wps);
+    const tokens = tokenizeRevealLine(line);
+    for (const tok of tokens) {
+      this.term.write(tok.text);
+      if (tok.kind !== 'word') continue;
+      wordsPrinted++;
+      if (this.hooks.onKey && wordsPrinted % 11 === 0) this.hooks.onKey();
+      await sleep(delay);
+    }
+    return wordsPrinted;
+  }
+
+  /** Word-by-word reveal for game `print` events (narrative); empty lines are instant. */
+  async revealGamePrint(lines: string[], pacing: Omit<RevealPacingContext, 'line'>) {
+    if (!lines.length) return;
+    if (lines.every((l) => !stripAnsi(l).trim())) {
+      this.print(lines);
+      return;
+    }
+    this.running = true;
+    try {
+      let wordsPrinted = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (i > 0) this.term.write('\r\n');
+        wordsPrinted = await this.revealLineWordByWord(lines[i], { ...pacing, line: lines[i] }, wordsPrinted);
+      }
+      this.term.write('\r\n');
+    } finally {
+      this.running = false;
+      if (!this.locked) this.render();
+    }
+  }
+
+  /** Busy animation, then word-by-word command output. Does not touch game events. */
+  async revealCommandOutput(lines: string[], plan: CommandDelayPlan, pacing: Omit<RevealPacingContext, 'line'>) {
     this.running = true;
     try {
       if (plan.instant) {
@@ -155,14 +195,10 @@ export class GameTerminal {
       }
       await this.playWorking(plan.delayMs);
       if (!lines.length) return;
-      if (!plan.stream || lines.length === 1) {
-        this.print(lines);
-        return;
-      }
+      let wordsPrinted = 0;
       for (let i = 0; i < lines.length; i++) {
         if (i > 0) this.term.write('\r\n');
-        this.term.write(lines[i]);
-        await sleep(streamLineDelayMs(lines[i]));
+        wordsPrinted = await this.revealLineWordByWord(lines[i], { ...pacing, line: lines[i] }, wordsPrinted);
       }
       this.term.write('\r\n');
     } finally {

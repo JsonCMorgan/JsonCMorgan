@@ -5,7 +5,7 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 import './styles.css';
 
-import { c } from './engine/ansi';
+import { c, stripAnsi } from './engine/ansi';
 import { INDEX_BY_ID, INDEX_ENTRIES } from './engine/content/index-entries';
 import type { GameEvent } from './engine/events';
 import { Game, SaveData } from './engine/game';
@@ -144,7 +144,7 @@ async function runCommand(line: string) {
   const ipMatch = line.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g);
   const out = game.exec(line);
   const plan = commandDelayPlan(line, out);
-  await term.revealCommandOutput(out, plan);
+  await term.revealCommandOutput(out, plan, { tutorial: !!game.run.tutorial });
   if (line.trim().startsWith('hints')) {
     prefs.hintLevel = game.profile.hintLevel ?? prefs.hintLevel;
     savePrefs();
@@ -164,7 +164,8 @@ async function runCommand(line: string) {
 function onEvent(e: GameEvent) {
   switch (e.type) {
     case 'print':
-      term.print(e.lines);
+      if (!e.lines.length || e.lines.every((l) => !stripAnsi(l).trim())) term.print(e.lines);
+      else void term.revealGamePrint(e.lines, { tutorial: !!game.run.tutorial });
       break;
     case 'clear':
       term.clear();
