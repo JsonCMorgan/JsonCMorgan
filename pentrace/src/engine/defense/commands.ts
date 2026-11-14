@@ -7,9 +7,9 @@ type DefenseCmd = (g: Game, args: string[]) => string[];
 
 class DefenseCmdError extends Error {}
 
-const err = (msg: string): never => {
+function err(msg: string): never {
   throw new DefenseCmdError(msg);
-};
+}
 
 function ticketsCmd(g: Game): string[] {
   const d = g.run.defense!;

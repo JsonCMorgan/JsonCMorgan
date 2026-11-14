@@ -130,6 +130,7 @@ export function defaultProgression(version: number): Pick<
   | 'pendingPerkPick'
   | 'freeRespecThisRun'
   | 'metFixers'
+  | 'gamePhase'
 > {
   return {
     operatorRank: 1,
