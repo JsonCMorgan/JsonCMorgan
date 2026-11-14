@@ -1,0 +1,16 @@
+{
+  "id": "spacer",
+  "display_name": "Spacer",
+  "element": "kinetic",
+  "base_hp": 36,
+  "base_attack": 9,
+  "abilities": [
+    {
+      "id": "plasma_cutter",
+      "name": "Plasma Cutter",
+      "power": 10,
+      "kind": "physical"
+    }
+  ],
+  "bond_flavor": "Scanner first, questions later."
+}

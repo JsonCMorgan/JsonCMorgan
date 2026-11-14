@@ -5,7 +5,13 @@ extends Control
 
 
 func _ready() -> void:
-	_room_label.text = "Deck 3 — flickering aux power. Something moved in the bulkhead."
+	if GameState.run.get("active", false):
+		_room_label.text = (
+			"Deck %d — O₂ %d%%. Something moved in the bulkhead."
+			% [int(GameState.run.get("room_index", 0)) + 3, int(GameState.run.get("o2", 0))]
+		)
+	else:
+		_room_label.text = "Deck 3 — flickering aux power. Something moved in the bulkhead."
 
 
 func _on_encounter_pressed() -> void:
@@ -14,9 +20,10 @@ func _on_encounter_pressed() -> void:
 
 
 func _on_extract_pressed() -> void:
-	# TODO Phase 2: run success rewards and meta save.
+	GameState.end_run()
 	get_tree().change_scene_to_file("res://scenes/ship_hub.tscn")
 
 
 func _on_abort_pressed() -> void:
+	GameState.end_run()
 	get_tree().change_scene_to_file("res://scenes/ship_hub.tscn")

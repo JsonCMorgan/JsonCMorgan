@@ -1,0 +1,12 @@
+{
+  "id": "bulkgrub",
+  "display_name": "Bulkgrub",
+  "element": "kinetic",
+  "base_hp": 48,
+  "base_attack": 7,
+  "abilities": [
+    { "id": "ram", "name": "Ram", "power": 11, "kind": "physical" },
+    { "id": "shed_plating", "name": "Shed Plating", "power": 0, "kind": "buff_def" }
+  ],
+  "bond_flavor": "Chews through bulkheads."
+}

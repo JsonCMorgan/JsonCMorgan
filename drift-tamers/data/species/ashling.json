@@ -1,0 +1,12 @@
+{
+  "id": "ashling",
+  "display_name": "Ashling",
+  "element": "thermal",
+  "base_hp": 38,
+  "base_attack": 9,
+  "abilities": [
+    { "id": "char_nip", "name": "Char Nip", "power": 10, "kind": "physical" },
+    { "id": "smokescreen", "name": "Smokescreen", "power": 0, "kind": "debuff" }
+  ],
+  "bond_flavor": "Smells like burnt insulation."
+}

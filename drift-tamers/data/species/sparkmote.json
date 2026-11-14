@@ -1,0 +1,12 @@
+{
+  "id": "sparkmote",
+  "display_name": "Sparkmote",
+  "element": "em",
+  "base_hp": 34,
+  "base_attack": 10,
+  "abilities": [
+    { "id": "arc_lash", "name": "Arc Lash", "power": 11, "kind": "physical" },
+    { "id": "jam_field", "name": "Jam Field", "power": 0, "kind": "debuff" }
+  ],
+  "bond_flavor": "Hums like bad wiring."
+}

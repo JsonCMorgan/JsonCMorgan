@@ -9,5 +9,5 @@ func _ready() -> void:
 
 
 func _on_start_run_pressed() -> void:
-	# TODO Phase 2: persist loadout and seed run RNG before transition.
+	GameState.start_run()
 	get_tree().change_scene_to_file("res://scenes/run_stub.tscn")

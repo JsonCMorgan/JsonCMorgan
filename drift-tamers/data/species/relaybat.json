@@ -1,0 +1,12 @@
+{
+  "id": "relaybat",
+  "display_name": "Relaybat",
+  "element": "em",
+  "base_hp": 32,
+  "base_attack": 9,
+  "abilities": [
+    { "id": "ping", "name": "Ping", "power": 8, "kind": "support" },
+    { "id": "dive", "name": "Dive", "power": 13, "kind": "physical" }
+  ],
+  "bond_flavor": "Nest in comm relays."
+}

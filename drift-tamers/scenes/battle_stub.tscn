@@ -56,7 +56,31 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.8, 0.85, 1)
 theme_override_font_sizes/font_size = 16
-text = "ENCOUNTER — turn-based stub"
+text = "ENCOUNTER — Hullmite (Phase 2a)"
+
+[node name="StatusRow" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="WildHpLabel" type="Label" parent="Margin/VBox/StatusRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Wild HP: -- / --"
+
+[node name="AllyHpLabel" type="Label" parent="Margin/VBox/StatusRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 12
+text = "Crew: --"
+
+[node name="ScanLabel" type="Label" parent="Margin/VBox/StatusRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.85, 0.75, 1)
+theme_override_font_sizes/font_size = 12
+text = "Scan: 0%"
 
 [node name="BattleLog" type="RichTextLabel" parent="Margin/VBox"]
 unique_name_in_owner = true
@@ -73,14 +97,17 @@ theme_override_constants/separation = 8
 alignment = 1
 
 [node name="Attack" type="Button" parent="Margin/VBox/Actions"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Attack"
 
 [node name="Scan" type="Button" parent="Margin/VBox/Actions"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Scan"
 
 [node name="Bond" type="Button" parent="Margin/VBox/Actions"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Bond"
 

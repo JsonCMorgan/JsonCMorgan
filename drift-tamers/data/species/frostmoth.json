@@ -1,0 +1,12 @@
+{
+  "id": "frostmoth",
+  "display_name": "Frostmoth",
+  "element": "thermal",
+  "base_hp": 35,
+  "base_attack": 8,
+  "abilities": [
+    { "id": "chill_dust", "name": "Chill Dust", "power": 9, "kind": "physical" },
+    { "id": "flutter", "name": "Flutter", "power": 0, "kind": "evade" }
+  ],
+  "bond_flavor": "Condenses on cold pipes."
+}
