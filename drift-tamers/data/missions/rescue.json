@@ -1,0 +1,29 @@
+{
+  "id": "rescue",
+  "type_number": 2,
+  "display_name": "Rescue",
+  "board_title": "Block C — Evac Fifteen",
+  "unlocked": true,
+  "briefing": "Fifteen souls, one failing block, zero patience from port authority. You are the embarrassing private option that still has air tanks.\n\nNav: \"I mapped three warm vents. Pick the ones with people, not fauna.\"",
+  "beats": {
+    "insert": "INTERCOM // Tinny sobbing, then hold music. Somebody survived long enough to get bitter. O₂ scrubbers cough like smokers.",
+    "complication": "RADIO // Unregistered tug on the scope. Salvage rivals or volunteers? Either way they are closer to the galley deck.",
+    "crisis": "SENSOR // Life signs flicker in pairs. Xen activity spikes where the survivors holed up. You cannot herd people and fight on the same breath."
+  },
+  "debrief": {
+    "win": "Fifteen becomes fourteen plus one apology for a sprained ankle. Rep bumps. Cookie makes stew that counts as celebration.",
+    "partial": "You got most of them out. Port will call it negligence. Survivors call you saviors anyway, which almost balances.",
+    "fail": "Empty shuttle, heavy hearts. Independence rep takes a hit. Crew agrees not to mention it until the mugs are empty."
+  },
+  "modifiers": {
+    "extra_fight": false,
+    "deep_scan": false,
+    "extract_bonus": 35,
+    "rest_weight_bonus": 2
+  },
+  "win_flags": {
+    "primary": "survivors_evacuated",
+    "win_min_rooms": 4,
+    "partial_min_rest": 1
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "survey",
+  "type_number": 1,
+  "display_name": "Survey",
+  "board_title": "Theta Hab — Core Sampling",
+  "unlocked": true,
+  "briefing": "Indep science coop wants hard numbers from a corpse-station before the insurers torch it. Scan the breach node, grab what the optics already proved, and try not to become a footnote.\n\nCookie: \"Bring back something that isn't mold.\"",
+  "beats": {
+    "insert": "COMMS // Thessaly relay: static, then someone humming off-key. Frost on every viewport. Smells like a freezer someone lied about.",
+    "complication": "LOG // Partial civilian manifest on a sticky note. Either squatters or looters beat you here. Scanner says both signatures are 'probably fine.'",
+    "crisis": "LOG // Primary array is dying. You can finish the sweep or sprint for extract before the backup batteries start their impression of a sunset."
+  },
+  "debrief": {
+    "win": "Science gets their charts. Cookie labels the sample jars 'definitely not soup.' Independence guild pings you a polite thank-you and an impolite invoice.",
+    "partial": "Half the lattice is noise. Still publishable, says comms. The coop pays in credits and mild disappointment.",
+    "fail": "Board shells you for empty hands. Crew pretends the mugs are fuller than they are. Next time we punch the scan room harder."
+  },
+  "modifiers": {
+    "extra_fight": false,
+    "deep_scan": true,
+    "extract_bonus": 30,
+    "scan_room_bias": true
+  },
+  "win_flags": {
+    "primary": "data_scanned",
+    "win_min_rooms": 4
+  }
+}

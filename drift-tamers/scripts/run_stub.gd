@@ -14,7 +14,7 @@ var _last_effect_line: String = ""
 
 func _ready() -> void:
 	if not GameState.run.get("active", false):
-		_room_label.text = "No active contract. Return to ship."
+		_room_label.text = "No active mission. Return to ship."
 		_set_nav_enabled(false)
 		return
 	if int(GameState.run.get("o2", 0)) <= 0 and not bool(GameState.run.get("in_room", false)):
@@ -25,9 +25,12 @@ func _ready() -> void:
 
 
 func _refresh_ui() -> void:
+	var mission := GameState.get_mission(str(GameState.run.get("mission_id", "survey")))
+	var mission_title := str(mission.get("display_name", "Mission"))
 	var room_num := int(GameState.run.get("room_index", 0)) + 1
 	var total := GameState.total_rooms()
-	_hud_label.text = "Room %d / %d — O₂ %d / %d" % [
+	_hud_label.text = "%s — Room %d / %d — O₂ %d / %d" % [
+		mission_title,
 		room_num,
 		maxi(1, total),
 		int(GameState.run.get("o2", 0)),
@@ -76,7 +79,14 @@ func _on_step_pressed() -> void:
 		GameState.forced_o2_retreat()
 		get_tree().change_scene_to_file("res://scenes/ship_hub.tscn")
 		return
-	_last_effect_line = str(result.get("effect", ""))
+	var beat := str(result.get("beat_line", ""))
+	var effect := str(result.get("effect", ""))
+	_last_effect_line = beat
+	if effect != "" and effect != "fight_pending":
+		if _last_effect_line != "":
+			_last_effect_line += "\n\n" + effect
+		else:
+			_last_effect_line = effect
 	if int(GameState.run.get("o2", 0)) <= 0:
 		GameState.forced_o2_retreat()
 		get_tree().change_scene_to_file("res://scenes/ship_hub.tscn")

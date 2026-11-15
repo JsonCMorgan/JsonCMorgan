@@ -28,60 +28,89 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 20
+theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_bottom = 16
 
-[node name="VBox" type="VBoxContainer" parent="Margin"]
+[node name="Scroll" type="ScrollContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 12
+size_flags_vertical = 3
 
-[node name="Title" type="Label" parent="Margin/VBox"]
+[node name="VBox" type="VBoxContainer" parent="Margin/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Margin/Scroll/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.78, 0.55, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 20
 text = "Drift Tamers — Ship Hub"
 
-[node name="Flavor" type="Label" parent="Margin/VBox"]
+[node name="Flavor" type="Label" parent="Margin/Scroll/VBox"]
 layout_mode = 2
 autowrap_mode = 3
 theme_override_colors/font_color = Color(0.82, 0.85, 0.88, 1)
 text = "The *Merrifield* smells like reheated protein and honest engines. Someone left a mug on the nav console again. Good."
 
-[node name="StatusLabel" type="Label" parent="Margin/VBox"]
+[node name="MemoryLabel" type="Label" parent="Margin/Scroll/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 3
-theme_override_colors/font_color = Color(0.65, 0.75, 0.85, 1)
+theme_override_colors/font_color = Color(0.55, 0.65, 0.7, 1)
+text = ""
+
+[node name="StatusLabel" type="RichTextLabel" parent="Margin/Scroll/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 48)
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+theme_override_colors/default_color = Color(0.65, 0.75, 0.85, 1)
 text = "..."
 
-[node name="MetaLabel" type="Label" parent="Margin/VBox"]
+[node name="MetaLabel" type="Label" parent="Margin/Scroll/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
 text = "..."
 
-[node name="ContractsTitle" type="Label" parent="Margin/VBox"]
+[node name="MissionsTitle" type="Label" parent="Margin/Scroll/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.72, 0.5, 1)
-text = "Contract board (pick one)"
+text = "Mission board (v1)"
 
-[node name="ContractStandard" type="Button" parent="Margin/VBox"]
+[node name="MissionList" type="VBoxContainer" parent="Margin/Scroll/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
-text = "Standard Salvage — balanced run"
+theme_override_constants/separation = 4
 
-[node name="ContractCorpAudit" type="Button" parent="Margin/VBox"]
+[node name="BriefingLabel" type="RichTextLabel" parent="Margin/Scroll/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
-text = "Corp Audit — +1 security fight, credit tilt"
+custom_minimum_size = Vector2(0, 72)
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+theme_override_colors/default_color = Color(0.78, 0.8, 0.82, 1)
+text = "[i]Select a mission for briefing.[/i]"
 
-[node name="ContractDeepScan" type="Button" parent="Margin/VBox"]
+[node name="DeployButton" type="Button" parent="Margin/Scroll/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
-text = "Deep Scan — lower O₂, rare table"
+text = "Deploy crew"
+disabled = true
 
-[node name="Spacer" type="Control" parent="Margin/VBox"]
+[node name="LockedTitle" type="Label" parent="Margin/Scroll/VBox"]
 layout_mode = 2
-size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.45, 0.48, 0.52, 1)
+theme_override_font_sizes/font_size = 12
+text = "Future ops (Phase 4)"
 
-[connection signal="pressed" from="Margin/VBox/ContractStandard" to="." method="_on_standard_pressed"]
-[connection signal="pressed" from="Margin/VBox/ContractCorpAudit" to="." method="_on_corp_audit_pressed"]
-[connection signal="pressed" from="Margin/VBox/ContractDeepScan" to="." method="_on_deep_scan_pressed"]
+[node name="LockedList" type="VBoxContainer" parent="Margin/Scroll/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[connection signal="pressed" from="Margin/Scroll/VBox/DeployButton" to="." method="_on_deploy_pressed"]

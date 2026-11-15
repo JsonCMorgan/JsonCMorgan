@@ -1,0 +1,26 @@
+{
+  "id": "bounty",
+  "type_number": 4,
+  "display_name": "Bounty",
+  "board_title": "Warrant 884 — Last Seen Deck 9",
+  "unlocked": true,
+  "briefing": "Fugitive tech, stolen habitat firmware, and a price tag with extra zeroes. Bring them in or bring proof they stopped breathing. Court prefers the first option.\n\nLegal pinged us twice. That is how you know it is messy.",
+  "beats": {
+    "insert": "CHATTER // Port gossip on open band: 'they are still aboard.' Your warrant disagrees politely. Deck plates ring hollow underfoot.",
+    "complication": "TRAIL // Booby-wired locker and a fake ID chip. They knew someone would come. Maybe they wanted someone specific.",
+    "crisis": "SIGNATURE // Elite nest heat bloom on Deck 9. Either the fugitive brought pets, or they became one. Warrant does not care which."
+  },
+  "debrief": {
+    "win": "Target neutralized or cuffed in spirit if not in body. Legal sends a form that counts as applause. Credits hit before the ink dries.",
+    "partial": "Nest cleared but no positive ID. Bounty office pays a nuisance fee. You are on the watch list politely.",
+    "fail": "Target ghosts. Legal heat on the crew. Nav deletes the route from the log. Pretends it was never there."
+  },
+  "modifiers": {
+    "extra_fight": true,
+    "deep_scan": false,
+    "extract_bonus": 45
+  },
+  "win_flags": {
+    "primary": "target_neutralized"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "locked_types": [
+    {"id": "sabotage", "type_number": 6, "display_name": "Sabotage", "board_title": "Corp Rig — Classified"},
+    {"id": "quarantine", "type_number": 7, "display_name": "Quarantine", "board_title": "Nest Tier — Hot Zone"},
+    {"id": "salvage", "type_number": 8, "display_name": "Salvage", "board_title": "Derelict Race — First Strip"},
+    {"id": "diplomacy", "type_number": 9, "display_name": "Diplomacy", "board_title": "Treaty Witness — Silent Deck"},
+    {"id": "smuggling", "type_number": 10, "display_name": "Smuggling", "board_title": "Scan Dodge — Grey Berth"},
+    {"id": "sos", "type_number": 11, "display_name": "SOS", "board_title": "Distress Ping — Unknown"},
+    {"id": "prospecting", "type_number": 12, "display_name": "Prospecting", "board_title": "Vein Map — Fringe Belt"}
+  ]
+}

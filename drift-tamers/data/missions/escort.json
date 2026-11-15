@@ -1,0 +1,28 @@
+{
+  "id": "escort",
+  "type_number": 5,
+  "display_name": "Escort",
+  "board_title": "Convoy Slice — VIP Through Slice",
+  "unlocked": true,
+  "briefing": "One nervous exec, one stolen route, many holes in the hull. Your job is to make the derelict look like a scenic shortcut until the airlock opens.\n\nVIP on comms: \"If I die, my lawyer lives forever.\"",
+  "beats": {
+    "insert": "ESCORT LOG // VIP tethered to your lead with shame and high-vis tape. Their perfume fights the ammonia. Charming.",
+    "complication": "HOSTILE // Drones ping the VIP suit like they recognize the logo. Coincidence is a word lawyers eat for breakfast.",
+    "crisis": "BREACH // Pressure drop in the flank corridor. VIP screams into a frequency only dogs deserve. Keep them breathing, keep moving."
+  },
+  "debrief": {
+    "win": "VIP intact, ego bruised. Convoy bonus lands. Cookie refuses to let the exec wash a mug. Policy.",
+    "partial": "VIP lived but the story will exaggerate. Payout cut, morale intact. They tip anyway because guilt is a currency.",
+    "fail": "VIP lost or you legged it without them. Client fury arrives before the airlock finishes cycling. Crew speaks in whispers for a day."
+  },
+  "modifiers": {
+    "extra_fight": false,
+    "deep_scan": false,
+    "extract_bonus": 38
+  },
+  "win_flags": {
+    "primary": "vip_intact",
+    "fail_on_abort": true,
+    "fail_on_o2": true
+  }
+}

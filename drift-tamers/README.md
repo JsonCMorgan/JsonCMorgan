@@ -4,23 +4,44 @@ Sci-fi roguelite monster tamer: a salvage crew boards derelicts, scans xeno faun
 
 **Phase 2a** added `GameState`, species JSON, and turn battles with scan and bond.
 
-**Phase 2b** adds the **contract board**, **5-room run loop**, O₂ pressure, weighted wild encounters, and extract / abort payouts.
+**Phase 2b** added the **contract board**, **5-room run loop**, O₂ pressure, weighted wild encounters, and extract / abort payouts.
+
+**Phase 3a** adds the **mission engine**: five playable mission types (Survey, Rescue, Recovery, Bounty, Escort), JSON briefings and story beats, mission-flavored debriefs on hub return, and types 6–12 shown as locked on the board.
 
 ## Open in Godot
 
 1. Install **[Godot 4.3+](https://godotengine.org/download)** (4.x with GL Compatibility is fine).
 2. In the Project Manager, **Import** → select this folder’s `project.godot`.
-3. Press **F5** (Play). Flow: **Ship Hub** → pick a **contract** → **Derelict run** (rooms) → **Battle** when fights trigger.
+3. Press **F5** (Play). Flow: **Ship Hub** → pick a **mission** (briefing + Deploy) → **Derelict run** (rooms) → **Battle** when fights trigger.
 
 Pixel defaults are set in `project.godot`: **640×360** viewport, canvas stretch, **integer** scale mode, **nearest** texture filter, and 2D pixel snap.
 
-## Phase 2b manual test
+## Phase 3a manual test
 
 1. **F5** from `ship_hub.tscn` (main scene).
-2. On the hub, read the **warm status line** and pick one of three contracts:
-   - **Standard Salvage** — 5 shuffled rooms, 100 O₂.
-   - **Corp Audit** — same deck **plus one extra corridor fight** (6 rooms).
-   - **Deep Scan** — **85 O₂ cap**; wild spawns use the rare table (Cryptid possible).
+2. Hub shows **five mission buttons** plus seven **locked** future types (tooltip: *Coming soon*).
+3. Click a mission — **briefing** appears in the panel. Press **Deploy** to launch.
+4. On the run screen, **Step into room** shows a mission **beat line** (insert room 1, complication ~2–3, crisis ~4–5) plus room effects in the log.
+5. Finish via **Extract** or **Abort** — hub **Status** shows mission **debrief** (win / partial / fail) from `data/missions/*.json`, not generic contract copy.
+6. **Last op** one-liner appears under the hub flavor text after a run.
+7. **Survey** biases early scan rooms and uses Deep Scan O₂ cap (85). **Rescue** biases early **galley rest**. **Recovery** biases **vault loot**. **Bounty** adds an extra corridor fight. **Escort** needs a clean full clear for a win debrief.
+
+### Mission data
+
+| File | Type | Win lean |
+|------|------|----------|
+| `data/missions/survey.json` | Scan / data | `data_scanned` + rooms cleared |
+| `data/missions/rescue.json` | Evac | Rest nodes + depth |
+| `data/missions/recovery.json` | Assets | Consumables secured |
+| `data/missions/bounty.json` | Warrant | Elite nest neutralized |
+| `data/missions/escort.json` | VIP | Full deck extract |
+
+Locked stubs live in `data/missions/locked_manifest.json` (types 6–12).
+
+## Phase 2b manual test (still valid)
+
+1. **F5** from `ship_hub.tscn` (main scene).
+2. Mission-specific modifiers replace the old three contract presets (see Phase 3a table above).
 3. On the run screen, confirm **Room N / Total** and **O₂ current / max** in the HUD.
 4. **Step into room** — pays **−8 O₂** per room. If O₂ hits **0**, you are forced back to hub (no contract bonus).
 5. **Non-fight rooms:** breach scan (+40% scan on next battle), galley rest (+15% HP, +5 O₂), vault loot (+1 consumable for payout).
@@ -64,11 +85,12 @@ Export presets are not committed in Phase 1; create them locally after installin
 drift-tamers/
   project.godot
   data/species/    # JSON species definitions (8 roster + spacer lead)
+  data/missions/   # Mission briefings, beats, debriefs (Phase 3a)
   scenes/          # ShipHub, RunStub, BattleStub
   scripts/
     autoload/      # game_state.gd
     combat/        # battle_engine.gd
-    data/          # species_data.gd, species_registry.gd
+    data/          # species_data.gd, species_registry.gd, mission_registry.gd
     run/           # room_deck.gd
   CREDITS.md       # Intended CC0 sources
 ```
