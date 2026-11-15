@@ -94,9 +94,6 @@ func _resolve_room_after_fight() -> void:
 
 func _finish_and_return() -> void:
 	_sync_party_hp()
-	if GameState.run.get("active", false) and bool(GameState.run.get("in_room", false)):
-		if not _room_resolved and _engine.battle_over:
-			_resolve_room_after_fight()
 	get_tree().change_scene_to_file("res://scenes/run_stub.tscn")
 
 
