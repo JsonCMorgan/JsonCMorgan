@@ -32,9 +32,25 @@
     }
   ],
   "noteEvidence": [
-    { "label": "source IP", "any": ["203.0.113.44"] },
-    { "label": "account", "any": ["admin"] },
-    { "label": "time window", "any": ["06:48", "06:49"] }
+    {
+      "label": "source IP",
+      "any": [
+        "203.0.113.44"
+      ]
+    },
+    {
+      "label": "account",
+      "any": [
+        "admin"
+      ]
+    },
+    {
+      "label": "time window",
+      "any": [
+        "06:48",
+        "06:49"
+      ]
+    }
   ],
   "noteSuggestion": "spray from 203.0.113.44 against admin 06:48-06:49, 1 Accepted",
   "wrong": {
@@ -45,5 +61,10 @@
     "Pattern: failed SSH spray then a single Accepted from one external IP.",
     "No matching change ticket, so it is not a VPN flap.",
     "Recommend: block the source, force MFA, reset the affected account."
+  ],
+  "lessons": [
+    "Hundreds of failures then one success from a single external IP is a confirmed password spray (T1110.003).",
+    "A true positive needs a documented IOC so the firewall team can block the source.",
+    "Work the CRITICAL ticket first. SLA clocks keep running while you chase lower-priority noise."
   ]
 }

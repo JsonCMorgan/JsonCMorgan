@@ -8,6 +8,8 @@ export interface IndexEntry {
   realWorld: string[];
   inGame: string[];
   defense: string[];
+  /** "In an interview I'd say..." lines for the INTERVIEW side of the flip card. */
+  interview: string[];
   related: string[];
 }
 
@@ -34,6 +36,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
       'Firewalls log dropped probes, so a scan from outside shows up as a burst of FW-DROP lines in the SIEM.',
       'Hardening: close services you do not need, hide version banners, and put admin services behind a VPN so a scan finds nothing worth attacking.',
     ],
+    interview: [
+      "A port scan maps which services are listening on a host. nmap -sV also grabs version banners, and a version is what you match against known CVEs.",
+      "On the defense side, a scan shows up as one source touching many ports in a short window, so an IDS or the firewall logs catch it.",
+    ],
     related: ['the-trace', 'ssh-credential-attacks', 'web-enumeration'],
   },
   {
@@ -58,6 +64,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
       'fail2ban bans an IP after N failures. Account lockout stops repeated guesses against one user.',
       'The real fix: key-only SSH (PasswordAuthentication no), MFA, and never exposing SSH directly to the internet.',
     ],
+    interview: [
+      "Brute force tries many passwords against one account. Password spraying tries one common password across many accounts so it stays under lockout limits.",
+      "In auth.log I look for a burst of Failed password lines from one IP, and the real red flag is an Accepted from that same IP right after.",
+    ],
     related: ['weak-default-creds', 'log-analysis', 'privilege-escalation'],
   },
   {
@@ -78,6 +88,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
     defense: [
       'Force a password change on first login and scan your own estate for default creds.',
       'Use a password manager or secrets vault for service accounts, rotate them, and alert on logins from new locations.',
+    ],
+    interview: [
+      "Default credentials are one of the easiest ways in. Mirai built a huge botnet from about 60 factory logins on cameras and routers.",
+      "The fix is forcing a password change on first login and scanning our own estate for defaults before an attacker does.",
     ],
     related: ['ssh-credential-attacks'],
   },
@@ -100,6 +114,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
       'A burst of 404s from one IP in the web access log is a directory brute force. A WAF can rate-limit or block it.',
       'Patch quickly, remove default pages and backups from the web root, and hide version banners.',
     ],
+    interview: [
+      "Web enumeration is discovering hidden paths, files and versions on a web server before attacking it.",
+      "As a defender I'd look for one IP generating a flood of 404s in the access log, which is what directory brute forcing looks like.",
+    ],
     related: ['port-scanning', 'privilege-escalation'],
   },
   {
@@ -121,6 +139,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
       'Least privilege: users get only the rights they need. Audit SUID binaries and sudo rules regularly.',
       'EDR and auditd can alert when a normal user suddenly spawns a root shell.',
     ],
+    interview: [
+      "Privilege escalation is going from a normal user to admin or root, usually through a misconfiguration or an unpatched local bug.",
+      "Least privilege and fast patching are the main defenses, and a new root session from an odd account is worth an alert.",
+    ],
     related: ['ssh-credential-attacks', 'covering-tracks'],
   },
   {
@@ -141,6 +163,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
     defense: [
       'Ship logs to a central SIEM or immutable storage. Use file integrity monitoring on /var/log.',
       'Alert on log deletion, cleared Windows event logs (event ID 1102) and gaps in log flow.',
+    ],
+    interview: [
+      "Attackers delete or edit logs to hide what they did. That is why logs should be forwarded to a SIEM in real time.",
+      "A sudden gap in a host's logging is a signal in itself, so I'd treat cleared logs as suspicious, not as quiet.",
     ],
     related: ['log-analysis', 'the-trace'],
   },
@@ -164,6 +190,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
       'This is the defense. A SIEM (Splunk, Elastic, Sentinel) runs the same searches automatically as correlation rules, like "5+ failures then a success from one IP within 10 minutes".',
       'Tier 1 analysts triage those alerts: confirm, scope, escalate. Knowing the raw log format makes you faster at it.',
     ],
+    interview: [
+      "When I triage an auth alert I separate noise from signal. Failed logins alone are background. A success after many failures from an outside IP is the IOC.",
+      "I'd mention grep for quick checks on a box and SIEM queries like stats count by src_ip for the bigger picture.",
+    ],
     related: ['ssh-credential-attacks', 'covering-tracks', 'the-trace'],
   },
   {
@@ -184,6 +214,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
     defense: [
       'Detection engineering: write rules that fire on the noisy steps (scans, brute force, new admin sessions).',
       'Rate-limit logins, alert on anomalies, and hunt for the quiet attackers the rules miss.',
+    ],
+    interview: [
+      "A SOC correlates lots of small, low-confidence events into one alert. One failed login is nothing; fifty plus a scan plus a new admin session is an incident.",
+      "That is why attackers try to stay slow and quiet, and why defenders tune correlation rules instead of alerting on every single event.",
     ],
     related: ['port-scanning', 'log-analysis', 'covering-tracks'],
   },
@@ -206,6 +240,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
       'Segment networks so one compromised box does not trust-unlock another. Log and alert on drops.',
       'Zero trust: authenticate every connection instead of trusting source IPs.',
     ],
+    interview: [
+      "Firewall rules are checked top-down and the first match wins, with a default deny at the end.",
+      "A rule that trusts one source IP is only as safe as that host. If it gets compromised, it becomes a pivot past the firewall.",
+    ],
     related: ['privilege-escalation', 'port-scanning'],
   },
   {
@@ -226,6 +264,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
       'Disable anonymous FTP and replace FTP with SFTP or HTTPS.',
       'Alert on anonymous logins and on cleartext protocols crossing the network.',
     ],
+    interview: [
+      "Anonymous FTP lets anyone log in without a password, and plain FTP sends credentials in cleartext.",
+      "If I found it on an internet-facing box I'd flag it and recommend SFTP with real accounts instead.",
+    ],
     related: ['ssh-credential-attacks', 'weak-default-creds'],
   },
   {
@@ -243,6 +285,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
     ],
     defense: [
       'Match the story to the data before you close. SLA clocks punish chasing INFO while CRITICAL waits.',
+    ],
+    interview: [
+      "Every alert ends in a disposition: true positive, false positive, or escalate.",
+      "I base the call on the evidence in the logs, not on the severity label the alert came with.",
     ],
     related: ['log-analysis', 'the-trace'],
   },
@@ -264,6 +310,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
     defense: [
       'Never suppress a whole alert type. Scope a tuning rule to the exact source range and time window, and review it when the change ticket expires.',
       'An attacker can hide inside expected noise, so confirm the source really is the approved scanner (range, timing, behavior).',
+    ],
+    interview: [
+      "A false positive is an alert on harmless activity, like an approved vulnerability scanner. I'd confirm it against the allowlist or change ticket before closing.",
+      "Then I'd suggest a tuning rule scoped to that source and time window, because too many false positives cause alert fatigue.",
     ],
     related: ['soc-disposition', 'port-scanning', 'analyst-notes'],
   },
@@ -287,6 +337,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
       'L2 contains: revoke sessions and tokens, reset the password, remove malicious inbox rules, check what was accessed, and call the user on a known number.',
       'Prevent: phishing-resistant MFA (FIDO2), number matching on push, conditional access that blocks new countries.',
     ],
+    interview: [
+      "Escalating is not failing. A successful login after failures from a new country is a possible account takeover, and L2 owns containment.",
+      "My escalation note would give L2 the user, source IP, country and time window so they can revoke sessions quickly.",
+    ],
     related: ['soc-disposition', 'analyst-notes', 'weak-default-creds'],
   },
   {
@@ -305,6 +359,10 @@ export const INDEX_ENTRIES: IndexEntry[] = [
     ],
     defense: [
       'Write the note as if the next analyst has never seen the case. Use exact values and UTC times, not "the weird IP".',
+    ],
+    interview: [
+      "My notes answer who, what, when and why: exact IPs, usernames and UTC times, plus the evidence I checked.",
+      "The goal is that the next analyst, or an auditor, never has to redo my investigation.",
     ],
     related: ['soc-disposition', 'soc-escalation', 'false-positive-tuning'],
   },

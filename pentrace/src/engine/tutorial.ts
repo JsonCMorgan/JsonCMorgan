@@ -354,3 +354,11 @@ function anyAffordable(g: Game): boolean {
 export const TUTORIAL_PAY_FIRST = 450;
 export const TUTORIAL_PAY_REPLAY = 50;
 export { TRAINING_INTRUDER_IP };
+
+/** Mission Complete debrief for the training sim. */
+export const TRAINING_LESSONS = [
+  'The breach loop: recon, read the firewall, pivot, crack enough ports, getroot, loot, get out.',
+  'Noise is the real enemy. Every tool raises the trace, and quiet beats fast.',
+  'Logs tell the story: Failed lines are noise until one ends in an Accepted from outside.',
+  'When stuck: hint, help pages and the INDEX explain the real technique behind each step.',
+];

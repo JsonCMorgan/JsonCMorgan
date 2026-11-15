@@ -31,6 +31,8 @@ export interface DefenseMission {
   noteSuggestion: string;
   wrong: Partial<Record<Disposition, string>>;
   triageBullets: string[];
+  /** Mission Complete debrief takeaways. */
+  lessons: string[];
 }
 
 export interface DefenseTicketRow {

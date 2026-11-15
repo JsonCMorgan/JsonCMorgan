@@ -60,6 +60,17 @@ export class Synth {
       case 'error':
         this.tone(140, 0, 0.18, 'sawtooth', 0.05, 90);
         break;
+      case 'fanfare':
+        [523, 523, 523, 523, 415, 466, 523].forEach((f, i) =>
+          this.tone(f, [0, 0.11, 0.22, 0.33, 0.6, 0.78, 0.96][i], i === 6 ? 0.6 : 0.1, 'sawtooth', 0.03),
+        );
+        break;
+      case 'tick':
+        this.tone(2400, 0, 0.012, 'square', 0.012);
+        break;
+      case 'rankup':
+        [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, i * 0.07, 0.3, 'triangle', 0.045));
+        break;
       case 'alarm':
         this.tone(660, 0, 0.25, 'sawtooth', 0.05, 330);
         this.tone(660, 0.3, 0.25, 'sawtooth', 0.05, 330);

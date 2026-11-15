@@ -44,10 +44,34 @@
     }
   ],
   "noteEvidence": [
-    { "label": "user", "any": ["j.alvarez", "alvarez"] },
-    { "label": "source IP", "any": ["203.0.113.77"] },
-    { "label": "new country", "any": ["Romania", "RO", "Bucharest"] },
-    { "label": "time window", "any": ["03:3", "03:4"] }
+    {
+      "label": "user",
+      "any": [
+        "j.alvarez",
+        "alvarez"
+      ]
+    },
+    {
+      "label": "source IP",
+      "any": [
+        "203.0.113.77"
+      ]
+    },
+    {
+      "label": "new country",
+      "any": [
+        "Romania",
+        "RO",
+        "Bucharest"
+      ]
+    },
+    {
+      "label": "time window",
+      "any": [
+        "03:3",
+        "03:4"
+      ]
+    }
   ],
   "noteSuggestion": "j.alvarez: 3 fails then SUCCESS from 203.0.113.77 (Romania) 03:36-03:41 UTC, MFA push approved, new inbox forward rule. Possible ATO, revoke sessions",
   "wrong": {
@@ -58,5 +82,11 @@
     "Success right after failures, from a new country, outside working hours.",
     "MFA push approved at 03:41: possible MFA fatigue. The inbox forward rule is a classic post-compromise move.",
     "L2 contains: revoke sessions, reset the password, remove the rule, call the user."
+  ],
+  "lessons": [
+    "A success after failures, from a new country, at odd hours is a possible account takeover.",
+    "Escalate when containment needs L2 authority, like revoking sessions and resetting the account.",
+    "The escalation note is the handoff: user, IP, country and time window, so L2 can act without re-investigating.",
+    "A new inbox forwarding rule right after a suspicious login is a classic post-compromise move."
   ]
 }

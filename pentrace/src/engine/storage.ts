@@ -8,6 +8,8 @@ export type HintPref = HintLevel | 'auto';
 export interface PenTracePrefs {
   tutorial: boolean;
   hintLevel?: HintPref;
+  /** Mission Complete: instant counts, no slam-ins. Unset follows the OS prefers-reduced-motion. */
+  reducedMotion?: boolean;
 }
 
 export const DEFAULT_PREFS: PenTracePrefs = { tutorial: true, hintLevel: 'auto' };

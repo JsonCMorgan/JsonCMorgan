@@ -34,6 +34,8 @@ import { advanceClock } from './engine/clock';
 import { commandDelayPlan } from './engine/command-delay';
 import { fsVizHtml, gameFsVizModel, type FsVizAnim } from './ui/fsviz-panel';
 import { GameTerminal } from './ui/terminal';
+import { MissionCompleteView } from './ui/mission-complete';
+import { PERK_DEFS, perkPointsAvailable } from './engine/progression';
 import { TUTORIAL_STEPS } from './engine/tutorial';
 import { TRAINING_INTRUDER_IP, TRAINING_VAULT_IP } from './engine/network';
 import {
@@ -176,6 +178,45 @@ async function runCommand(line: string) {
   if (/^\s*(connect)\b/.test(line) && game.run.connected) focusIp = game.run.connected;
   persist();
   renderAll();
+  tryOpenMissionComplete();
+}
+
+// ------------------------------------------------------------------ mission complete
+const reducedMotion = () => prefs.reducedMotion ?? window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+const mcView = new MissionCompleteView($('#mission-complete'), {
+  sound: (s) => synth.play(s),
+  reducedMotion,
+  toggleMotion: () => {
+    prefs.reducedMotion = !reducedMotion();
+    savePrefs();
+  },
+  perkPointsLeft: () => perkPointsAvailable(game.profile.operatorRank, game.profile.perkRanks),
+  perkOptions: () =>
+    Object.values(PERK_DEFS)
+      .filter((d) => game.profile.operatorRank >= d.minRank && (game.profile.perkRanks[d.id] ?? 0) < d.max)
+      .map((d) => ({ id: d.id, name: d.name, desc: d.desc, rank: game.profile.perkRanks[d.id] ?? 0, max: d.max })),
+  pickPerk: (id) => {
+    const out = game.exec(`perks pick ${id}`);
+    term.print([c.dim(`$ perks pick ${id}`), ...out]);
+    persist();
+  },
+  onClose: () => {
+    game.dismissMissionComplete();
+    term.locked = false;
+    persist();
+    renderAll();
+    term.showPrompt();
+    term.focus();
+  },
+});
+
+/** Opens once the command's output has finished revealing. The engine is already paused by then. */
+function tryOpenMissionComplete() {
+  if (!game.missionComplete || mcView.isOpen || term.commandBusy || term.paging) return;
+  if (modal) closeModal();
+  term.locked = true;
+  term.blur();
+  mcView.open(game.missionComplete);
 }
 
 // ------------------------------------------------------------------ events
@@ -205,6 +246,9 @@ function onEvent(e: GameEvent) {
       break;
     case 'newRun':
       focusIp = game.world.gatewayIp;
+      break;
+    case 'missionComplete':
+      queueMicrotask(tryOpenMissionComplete);
       break;
   }
 }
@@ -406,6 +450,7 @@ bindHotkeys(window, {
     return true;
   },
   F1: () => {
+    if (mcView.isOpen) return true;
     openModal('index');
     return true;
   },
@@ -472,6 +517,7 @@ $('#netmap').addEventListener('click', (ev) => {
 });
 /** Puts keyboard focus where the visible screen expects it: an overlay's main button, or the terminal. */
 function refocus() {
+  if (mcView.isOpen) return;
   const overlayBtn = !$('#title').hidden ? $('#jack-in') : !$('#traced').hidden ? $('#new-identity') : null;
   if (overlayBtn) {
     const active = document.activeElement as HTMLElement | null;
@@ -715,7 +761,7 @@ async function runTutorialDemo() {
     } else if (id === 'shop') {
       await type('shop');
       await pause(1600);
-      document.querySelector<HTMLElement>('[data-buy="ram-512"]')?.click();
+      document.querySelector<HTMLElement>('[data-buy]:not([disabled])')?.click();
       await pause(1800);
       closeModal();
       await waitIdle();
@@ -749,6 +795,7 @@ function frame(now: number) {
     tutorialStuckSec += dt;
   }
   renderCredits(dt);
+  if (game.missionComplete && !mcView.isOpen) tryOpenMissionComplete();
   if (acc > 0.1) {
     acc = 0;
     renderAll();

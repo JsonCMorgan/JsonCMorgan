@@ -223,6 +223,7 @@ describe('contracts: full guided playthrough', () => {
     let peak = 0;
     let guard = 0;
     while (g.run.contracts.c3 !== 'done' && guard++ < 100) {
+      if (g.missionComplete) g.dismissMissionComplete();
       const h = g.nextHint();
       const cmd = h.cmd === 'grep Accepted /var/log/auth.log' ? `submit c3 ${w.attackerIp}` : h.cmd;
       if (cmd) g.exec(cmd);

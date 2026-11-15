@@ -1952,3 +1952,379 @@ html[data-phase='defense'] #app::before {
   font-size: 10px;
   letter-spacing: 0.12em;
 }
+
+/* ---------- mission complete (JRPG-style debrief) ---------- */
+.mc-overlay {
+  --mc-a: var(--magenta);
+  --mc-b: var(--cyan);
+  position: absolute;
+  inset: 0;
+  z-index: 75;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at center, color-mix(in srgb, var(--mc-a) 22%, transparent), transparent 65%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 4px),
+    rgba(5, 1, 13, 0.94);
+}
+.mc-overlay[hidden] {
+  display: none;
+}
+.mc-overlay.kind-defense {
+  --mc-a: var(--green);
+  --mc-b: #ffb000;
+}
+.mc-overlay.flagged {
+  --mc-a: var(--red);
+  --mc-b: #ffb000;
+}
+.mc-frame {
+  width: min(920px, 94vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mc-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: var(--mc-b);
+}
+.mc-sub {
+  flex: 1;
+}
+.mc-dots i {
+  display: inline-block;
+  width: 18px;
+  height: 4px;
+  margin-left: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  transform: skewX(-30deg);
+}
+.mc-dots i.done {
+  background: var(--mc-b);
+}
+.mc-dots i.on {
+  background: var(--mc-a);
+  box-shadow: 0 0 8px var(--mc-a);
+}
+.mc-motion {
+  background: none;
+  border: 1px solid var(--dim);
+  color: var(--dim);
+  font-size: 10px;
+  padding: 3px 8px;
+  letter-spacing: 0.1em;
+}
+.mc-stage {
+  overflow: auto;
+  min-height: 300px;
+  cursor: pointer;
+}
+.mc-stage.stage-debrief {
+  cursor: default;
+}
+.motion-full .mc-stage > * {
+  animation: mc-slam 0.32s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes mc-slam {
+  from {
+    opacity: 0;
+    transform: translateX(-60px) skewX(-12deg);
+    filter: blur(6px);
+  }
+}
+.mc-splash {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+.mc-title {
+  font-size: clamp(36px, 7vw, 84px);
+  color: var(--mc-a);
+  text-shadow: 0 0 24px var(--mc-a);
+}
+.motion-full .mc-title {
+  animation: logoin 0.9s ease-out;
+}
+.mc-mission {
+  font-family: var(--display);
+  letter-spacing: 0.3em;
+  color: var(--mc-b);
+}
+.mc-press {
+  letter-spacing: 0.3em;
+  font-size: 11px;
+}
+.mc-panel {
+  background: var(--panel);
+  border: 1px solid var(--mc-a);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--mc-a) 35%, transparent), inset 0 0 40px rgba(0, 0, 0, 0.5);
+  clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
+  padding: 22px 30px;
+}
+.mc-panel h3 {
+  margin: 0 0 16px;
+  font-family: var(--display);
+  letter-spacing: 0.3em;
+  color: var(--mc-a);
+}
+.mc-panel h4 {
+  margin: 18px 0 8px;
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: var(--mc-b);
+}
+.mc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+  font-family: var(--display);
+  letter-spacing: 0.2em;
+}
+.mc-num {
+  font-size: 30px;
+  color: var(--mc-b);
+  font-variant-numeric: tabular-nums;
+}
+.mc-num.credits {
+  color: var(--yellow);
+}
+.mc-fixer {
+  margin-top: 16px;
+  padding-left: 12px;
+  border-left: 3px solid var(--mc-b);
+  color: var(--text);
+  font-style: italic;
+}
+.mc-rank {
+  font-family: var(--display);
+  font-size: 44px;
+  color: var(--mc-b);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.mc-rankup {
+  display: none;
+  font-size: 14px;
+  padding: 4px 10px;
+  background: var(--mc-a);
+  color: #fff;
+  letter-spacing: 0.25em;
+  transform: rotate(-4deg);
+}
+.mc-rank.up .mc-rankup {
+  display: inline-block;
+}
+.mc-bar {
+  height: 14px;
+  margin: 10px 0 6px;
+  border: 1px solid var(--mc-b);
+  transform: skewX(-20deg);
+  background: rgba(0, 0, 0, 0.5);
+}
+.mc-bar .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--mc-b), var(--mc-a));
+  box-shadow: 0 0 12px var(--mc-a);
+}
+.mc-perk-prompt {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--yellow);
+  background: rgba(249, 240, 2, 0.06);
+}
+.mc-stamp {
+  display: inline-block;
+  font-family: var(--display);
+  font-weight: 900;
+  letter-spacing: 0.25em;
+  color: var(--yellow);
+  border: 2px solid var(--yellow);
+  padding: 4px 12px;
+  transform: rotate(-3deg);
+  text-shadow: 0 0 10px var(--yellow);
+}
+.motion-full .mc-stamp {
+  animation: mc-stamp 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes mc-stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-3deg) scale(2.4);
+  }
+}
+.mc-perks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+.mc-perk {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  max-width: 280px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--mc-b);
+  color: var(--text);
+}
+.mc-perk:hover {
+  border-color: var(--yellow);
+  box-shadow: 0 0 12px rgba(249, 240, 2, 0.4);
+}
+.mc-loot-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+}
+.mc-loot-item.uncommon {
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+}
+.mc-loot-item.rare {
+  border-color: var(--magenta);
+  box-shadow: 0 0 18px rgba(255, 43, 214, 0.55);
+}
+.mc-icon {
+  font-size: 18px;
+  color: var(--mc-b);
+}
+.mc-loot-item .new {
+  position: static;
+}
+.mc-loot-item .new,
+.mc-card .new {
+  margin-left: auto;
+  font-size: 10px;
+  padding: 2px 6px;
+  background: var(--mc-a);
+  color: #fff;
+  letter-spacing: 0.15em;
+}
+.mc-lessons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mc-lessons li {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  line-height: 1.5;
+}
+.mc-n {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  background: var(--mc-a);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 11px;
+}
+.mc-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.mc-card {
+  height: 250px;
+  padding: 0;
+  border: none;
+  background: none;
+  perspective: 900px;
+  color: var(--text);
+  text-align: left;
+}
+.mc-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.45s;
+}
+.mc-card.flipped .mc-card-inner {
+  transform: rotateY(180deg);
+}
+.motion-reduced .mc-card-inner {
+  transition: none;
+}
+.mc-card-front,
+.mc-card-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border: 1px solid var(--mc-b);
+  background: rgba(10, 4, 28, 0.95);
+  padding: 14px;
+  overflow: auto;
+}
+.mc-card-front {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  font-size: 15px;
+  box-shadow: inset 0 0 30px color-mix(in srgb, var(--mc-b) 20%, transparent);
+}
+.mc-key {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  color: var(--dim);
+  font-size: 11px;
+}
+.mc-card-back {
+  transform: rotateY(180deg);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.mc-card-back h5 {
+  margin: 6px 0 2px;
+  color: var(--mc-b);
+  letter-spacing: 0.2em;
+  font-size: 10px;
+}
+.mc-card-back p {
+  margin: 0 0 4px;
+}
+.mc-say {
+  color: var(--yellow);
+}
+.mc-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mc-overlay .big-btn.mc-continue {
+  background: var(--mc-a);
+  box-shadow: 0 0 30px var(--mc-a);
+}
+.motion-reduced .big-btn.mc-continue {
+  animation: none;
+}
+.mc-next {
+  border-color: var(--mc-b);
+  color: var(--mc-b);
+}

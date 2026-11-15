@@ -119,6 +119,7 @@ function closeTicket(g: Game, t: DefenseTicketRow, correct: boolean): { xp: numb
   const m = MISSION_BY_TICKET[t.id];
   const evidence = noteEvidenceHits(m, t.notes);
   const slaMet = !t.slaMissed;
+  const before = g.progressSnapshot();
   const xp = correct ? m.xp + evidence.length * EVIDENCE_XP + (slaMet ? SLA_BONUS_XP : 0) : 0;
   t.status = 'closed';
   t.result = { correct, evidence, xp, slaMet };
@@ -129,6 +130,24 @@ function closeTicket(g: Game, t: DefenseTicketRow, correct: boolean): { xp: numb
   const next = d.tickets.filter((x) => x.status !== 'closed').sort((a, b) => a.priority - b.priority)[0];
   if (next) d.activeTicketId = next.id;
   else d.outcome = 'complete';
+  if (correct) g.unlockIndex(m.expectedDisposition === 'tp' ? 'log-analysis' : m.expectedDisposition === 'fp' ? 'false-positive-tuning' : 'soc-escalation');
+  g.completeMission(before, {
+    missionId: m.id,
+    kind: 'defense',
+    title: m.title,
+    splash: correct ? 'TICKET RESOLVED' : 'QA FLAGGED',
+    subtitle: `${t.id} · ${t.client} · ${t.disposition ? LABEL[t.disposition] : ''}`,
+    credits: 0,
+    fixerLine: correct
+      ? `Handler Reeves: Good call on ${t.client}.${evidence.length === m.noteEvidence.length ? ' That note is exactly what L2 needs.' : ' Next time put more evidence in the note.'}`
+      : `Handler Reeves: QA flagged ${t.id}. Read the lessons, then take the next ticket.`,
+    lessons: m.lessons,
+    flagged: !correct,
+    extraLoot: [
+      ...(m.expectedIoc && correct ? [{ kind: 'ioc' as const, label: `IOC ${m.expectedIoc} documented` }] : []),
+      ...(t.notes.length ? [{ kind: 'file' as const, label: `analyst note (${evidence.length}/${m.noteEvidence.length} evidence)` }] : []),
+    ],
+  });
   return { xp, evidence };
 }
 
@@ -153,7 +172,6 @@ function submitDefenseCmd(g: Game, args: string[]): string[] {
   if (correct) {
     g.emitGameEvent({ type: 'toast', kind: 'success', title: 'TICKET CLOSED', body: `${id} ${LABEL[m.expectedDisposition]}` });
     g.emitGameEvent({ type: 'sound', sound: 'success' });
-    g.unlockIndex(m.expectedDisposition === 'tp' ? 'log-analysis' : m.expectedDisposition === 'fp' ? 'false-positive-tuning' : 'soc-escalation');
     out.push(
       c.green(c.bold(`  ✔ ${id} CLOSED · ${LABEL[m.expectedDisposition]}`)),
       c.cyan(`  +${xp} Operator XP`) + c.dim(`  (base ${m.xp}, evidence ${evidence.length}×${EVIDENCE_XP}${t.result!.slaMet ? `, SLA +${SLA_BONUS_XP}` : ', SLA missed'})`),

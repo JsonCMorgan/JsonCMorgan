@@ -1,6 +1,6 @@
 export type ToastKind = 'info' | 'index' | 'money' | 'warn' | 'danger' | 'success';
 export type Fx = 'glitch' | 'shake' | 'granted' | 'paid' | 'portopen' | 'firewall';
-export type Sound = 'blip' | 'success' | 'alarm' | 'cash' | 'error' | 'unlock' | 'granted';
+export type Sound = 'blip' | 'success' | 'alarm' | 'cash' | 'error' | 'unlock' | 'granted' | 'fanfare' | 'tick' | 'rankup';
 
 export type GameEvent =
   | { type: 'toast'; kind: ToastKind; title: string; body?: string }
@@ -10,4 +10,5 @@ export type GameEvent =
   | { type: 'print'; lines: string[] }
   | { type: 'clear' }
   | { type: 'traced' }
-  | { type: 'newRun' };
+  | { type: 'newRun' }
+  | { type: 'missionComplete' };

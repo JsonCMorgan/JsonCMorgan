@@ -47,9 +47,10 @@ import type { HintPref } from './storage';
 import { effectiveHintLevel } from './storage';
 import { parseLine, parseOpts, ParseError } from './parser';
 import { defaultRegistry, ToolContext, ToolDef, ToolRegistry } from './tools';
-import { StepCtx, TUTORIAL_PAY_FIRST, TUTORIAL_PAY_REPLAY, TUTORIAL_STEPS } from './tutorial';
+import { StepCtx, TRAINING_LESSONS, TUTORIAL_PAY_FIRST, TUTORIAL_PAY_REPLAY, TUTORIAL_STEPS } from './tutorial';
 import { displayPath, entriesFromDir, findFocus, type FsVizModel } from './fsviz';
 import { FsError, resolvePath, VFS } from './vfs';
+import { cardLoot, emptyTracking, recordConcept, type MissionReport, type MissionTracking, type StudySet } from './mission-complete';
 import { expandHistory, fileTypeLine, findPaths, isHidden, lsLines, shortFlags, ShellError, statLines, treeLines } from './shell-explore';
 
 export const BASE_RAM = 512;
@@ -90,6 +91,8 @@ export interface Profile extends ProgressionProfile {
   sound: boolean;
   tutorialDone: boolean;
   hintLevel?: HintPref;
+  /** Last Mission Complete debrief, reopened by the study command. */
+  lastStudy?: StudySet;
 }
 
 export interface RunState {
@@ -116,6 +119,8 @@ export interface RunState {
   defense?: DefenseRunState;
   /** Shell navigation memory per host ip: OLDPWD for cd -, the pushd stack, recent dirs for help lost. */
   nav?: Record<string, NavState>;
+  /** INDEX concepts, new cards and loot for the mission in progress (feeds Mission Complete). */
+  mission?: MissionTracking;
 }
 
 export interface NavState {
@@ -199,6 +204,8 @@ export class Game {
   private pendingPager: PagerRequest | null = null;
   private fsTouch: FsTouch | null = null;
   private lastInPipe = true;
+  /** Open Mission Complete screen. While set, the game is fully paused (tick does nothing). */
+  missionComplete: MissionReport | null = null;
 
   constructor(save?: SaveData | null, seed = Date.now() % 1_000_000, opts: GameOptions = {}) {
     this.registry = defaultRegistry();
@@ -434,6 +441,9 @@ export class Game {
 
   finishTutorial(skipped = false): string[] {
     const firstTime = !this.profile.tutorialDone;
+    const before = this.progressSnapshot();
+    const drillPaid = this.run.tutorial?.paid ? (firstTime ? TUTORIAL_PAY_FIRST : TUTORIAL_PAY_REPLAY) : 0;
+    const trainingTracking = this.tracking;
     this.profile.tutorialDone = true;
     const out: string[] = [];
     if (firstTime && !skipped) {
@@ -466,6 +476,21 @@ export class Game {
       this.run.procs = [];
       this.emit({ type: 'newRun' });
     } else this.startRun();
+    if (!skipped) {
+      const opTracking = this.run.mission;
+      this.run.mission = trainingTracking;
+      this.completeMission(before, {
+        missionId: 'drill',
+        kind: 'training',
+        title: 'Vex Training Sim',
+        splash: 'TRAINING COMPLETE',
+        subtitle: 'Vex Training Sim · cleared for live scope',
+        credits: drillPaid,
+        fixerLine: firstTime ? 'Vex: You are not my student anymore. Relay brokers your contracts now.' : 'Vex: Still sharp. Good.',
+        lessons: TRAINING_LESSONS,
+      });
+      this.run.mission = opTracking;
+    }
     this.emit({ type: 'toast', kind: 'success', title: skipped ? 'TRAINING SKIPPED' : 'TRAINING COMPLETE', body: 'Relay unlocked.' });
     if (!skipped) this.emit({ type: 'fx', fx: 'granted' });
     return [
@@ -552,8 +577,12 @@ export class Game {
     return effectiveStanding(this.profile, this.run, fixer);
   }
 
+  get paused(): boolean {
+    return !!this.missionComplete;
+  }
+
   tick(dt: number) {
-    if (this.run.traced) return;
+    if (this.run.traced || this.paused) return;
     if (this.run.defense) tickDefense(this, dt);
     this.run.elapsed += dt;
     if (this.run.defense) return;
@@ -587,12 +616,65 @@ export class Game {
 
   // ---------------------------------------------------------------- index / money
   unlockIndex(id: string) {
-    if (this.profile.index[id] || !INDEX_BY_ID[id]) return;
+    if (!INDEX_BY_ID[id]) return;
+    recordConcept(this.tracking, id, !this.profile.index[id]);
+    if (this.profile.index[id]) return;
     this.profile.index[id] = { unlockedAt: Date.now(), read: false };
     const e = INDEX_BY_ID[id];
     this.emit({ type: 'toast', kind: 'index', title: 'NEW INDEX ENTRY', body: e.title });
     this.emit({ type: 'sound', sound: 'unlock' });
     this.print([c.magenta(`  ◆ INDEX UNLOCKED: ${e.title}`) + c.dim(`   (index ${id})`)]);
+  }
+
+  get tracking(): MissionTracking {
+    return (this.run.mission ??= emptyTracking());
+  }
+
+  /** Snapshot taken before a mission pays out, so the tally and rank bar can animate from it. */
+  progressSnapshot() {
+    return { xp: this.profile.operatorXp, rank: this.profile.operatorRank };
+  }
+
+  /**
+   * Builds the Mission Complete report from the tracked concepts and opens the screen.
+   * The game stays paused until dismissMissionComplete().
+   */
+  completeMission(
+    before: { xp: number; rank: number },
+    m: Pick<MissionReport, 'missionId' | 'kind' | 'title' | 'splash' | 'subtitle' | 'credits' | 'fixerLine' | 'lessons' | 'flagged'> & { extraLoot?: MissionReport['loot'] },
+  ): MissionReport {
+    const t = this.tracking;
+    const perkPoints = perkPointsAvailable(this.profile.operatorRank, this.profile.perkRanks);
+    if (this.profile.operatorRank > before.rank && perkPoints > 0) this.profile.pendingPerkPick = true;
+    const report: MissionReport = {
+      missionId: m.missionId,
+      kind: m.kind,
+      title: m.title,
+      splash: m.splash,
+      subtitle: m.subtitle,
+      credits: m.credits,
+      xp: this.profile.operatorXp - before.xp,
+      xpBefore: before.xp,
+      rankBefore: before.rank,
+      xpAfter: this.profile.operatorXp,
+      rankAfter: this.profile.operatorRank,
+      perkPoints,
+      fixerLine: m.fixerLine,
+      loot: [...t.loot.map((label) => ({ kind: 'file' as const, label })), ...(m.extraLoot ?? []), ...cardLoot(t)],
+      lessons: m.lessons,
+      cards: [...t.concepts],
+      newCards: [...t.newCards],
+      flagged: m.flagged,
+    };
+    this.profile.lastStudy = { missionId: report.missionId, kind: report.kind, title: report.title, lessons: report.lessons, cards: report.cards };
+    this.run.mission = emptyTracking();
+    this.missionComplete = report;
+    this.emit({ type: 'missionComplete' });
+    return report;
+  }
+
+  dismissMissionComplete() {
+    this.missionComplete = null;
   }
 
   pay(amount: number, why: string) {
@@ -607,6 +689,7 @@ export class Game {
   private completeContract(id: ContractId) {
     if (this.run.contracts[id] !== 'active') return;
     const def = CONTRACT_BY_ID[id];
+    const before = this.progressSnapshot();
     this.run.contracts[id] = 'done';
     const fixer = FIXER_BY_ID[def.fixerId];
     this.print([
@@ -633,6 +716,17 @@ export class Game {
       }
     }
     this.unlockIndex(def.indexEntryId);
+    this.completeMission(before, {
+      missionId: id,
+      kind: 'offense',
+      title: def.title,
+      splash: def.type === 'Breach & Retrieve' ? 'BREACH COMPLETE' : 'CONTRACT CLOSED',
+      subtitle: `${id.toUpperCase()} · ${def.type} · ${this.world.org}`,
+      credits: def.payout,
+      fixerLine: `${fixer.name}: ${def.fixerLine} Standing with me is ${runSt} this op.`,
+      lessons: def.lessons,
+      extraLoot: def.answer ? [{ kind: 'ioc', label: `IOC ${def.answer(this.world)} reported` }] : [],
+    });
     const order: ContractId[] = ['c1', 'c2', 'c3'];
     const next = order[order.indexOf(id) + 1];
     if (next && this.run.contracts[next] === 'locked') {
@@ -1309,6 +1403,7 @@ export class Game {
         const home = new VFS(this.home.fs);
         home.mkdirp(destDir);
         home.write(`${destDir}/${name}`, content);
+        if (!this.tracking.loot.includes(name)) this.tracking.loot.push(name);
         this.addHeat(2);
         this.emit({ type: 'toast', kind: 'success', title: 'FILE EXFILTRATED', body: `${name} → ~/downloads` });
         this.emit({ type: 'sound', sound: 'success' });
@@ -1491,6 +1586,41 @@ export class Game {
               : `  ${c.dim('◇ ' + pad('??????', 24) + ' ' + e.unlockHint)}`,
           ),
           c.dim('index <entry-id> to read'),
+        ];
+      },
+      study: () => {
+        const st = this.profile.lastStudy;
+        if (!st) return [c.dim('study: no mission debrief yet. Finish a contract, a ticket or the training sim.')];
+        this.missionComplete = {
+          ...st,
+          splash: 'STUDY BREAK',
+          subtitle: 'Last mission debrief',
+          credits: 0,
+          xp: 0,
+          xpBefore: this.profile.operatorXp,
+          rankBefore: this.profile.operatorRank,
+          xpAfter: this.profile.operatorXp,
+          rankAfter: this.profile.operatorRank,
+          perkPoints: perkPointsAvailable(this.profile.operatorRank, this.profile.perkRanks),
+          fixerLine: '',
+          loot: [],
+          newCards: [],
+          studyOnly: true,
+        };
+        this.emit({ type: 'missionComplete' });
+        return [
+          c.bold(c.cyan(`STUDY // ${st.title}`)),
+          ...st.lessons.map((l) => `  ▸ ${l}`),
+          c.dim(`  cards: ${st.cards.map((id) => INDEX_BY_ID[id]?.title ?? id).join(' · ') || 'none'}`),
+        ];
+      },
+      interview: () => {
+        const ids = INDEX_ENTRIES.filter((e) => this.profile.index[e.id]);
+        if (!ids.length) return [c.dim('interview: unlock INDEX cards first. Every card adds interview lines here.')];
+        return [
+          c.bold(c.cyan(`INTERVIEW REVIEW SHEET // ${ids.length} topics`)),
+          c.dim('  Say these out loud. Explain them like you would to a hiring manager.'),
+          ...ids.flatMap((e) => ['', c.magenta(`  ${e.title}`), ...e.interview.map((l) => `    "${l}"`)]),
         ];
       },
       tools: () => [

@@ -46,9 +46,28 @@
     }
   ],
   "noteEvidence": [
-    { "label": "scanner IP", "any": ["192.0.2.25"] },
-    { "label": "allowlist or change ticket", "any": ["CHG-4471", "allowlist", "approved"] },
-    { "label": "scan window", "any": ["02:", "window", "Tue"] }
+    {
+      "label": "scanner IP",
+      "any": [
+        "192.0.2.25"
+      ]
+    },
+    {
+      "label": "allowlist or change ticket",
+      "any": [
+        "CHG-4471",
+        "allowlist",
+        "approved"
+      ]
+    },
+    {
+      "label": "scan window",
+      "any": [
+        "02:",
+        "window",
+        "Tue"
+      ]
+    }
   ],
   "noteSuggestion": "192.0.2.25 is the approved vuln scanner (allowlist 192.0.2.16/28, CHG-4471), inside the Tue 02:00-04:00 window",
   "wrong": {
@@ -59,5 +78,10 @@
     "A port sweep from one IP looks scary, but approved scanners do exactly that.",
     "The allowlist and change ticket prove it was expected.",
     "Tuning idea: suppress this alert for the approved range during the scan window."
+  ],
+  "lessons": [
+    "Scary-looking traffic can be expected. Check allowlists and change tickets before you call it an attack.",
+    "A false positive close still needs evidence in the note: the IP, the approved range and the change ticket.",
+    "Repeated false positives point to a tuning fix scoped to the source range and the time window."
   ]
 }
