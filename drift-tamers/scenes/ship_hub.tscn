@@ -55,12 +55,33 @@ autowrap_mode = 3
 theme_override_colors/font_color = Color(0.65, 0.75, 0.85, 1)
 text = "..."
 
+[node name="MetaLabel" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
+text = "..."
+
+[node name="ContractsTitle" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.72, 0.5, 1)
+text = "Contract board (pick one)"
+
+[node name="ContractStandard" type="Button" parent="Margin/VBox"]
+layout_mode = 2
+text = "Standard Salvage — balanced run"
+
+[node name="ContractCorpAudit" type="Button" parent="Margin/VBox"]
+layout_mode = 2
+text = "Corp Audit — +1 security fight, credit tilt"
+
+[node name="ContractDeepScan" type="Button" parent="Margin/VBox"]
+layout_mode = 2
+text = "Deep Scan — lower O₂, rare table"
+
 [node name="Spacer" type="Control" parent="Margin/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="StartRun" type="Button" parent="Margin/VBox"]
-layout_mode = 2
-text = "Take contract — board derelict"
-
-[connection signal="pressed" from="Margin/VBox/StartRun" to="." method="_on_start_run_pressed"]
+[connection signal="pressed" from="Margin/VBox/ContractStandard" to="." method="_on_standard_pressed"]
+[connection signal="pressed" from="Margin/VBox/ContractCorpAudit" to="." method="_on_corp_audit_pressed"]
+[connection signal="pressed" from="Margin/VBox/ContractDeepScan" to="." method="_on_deep_scan_pressed"]

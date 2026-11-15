@@ -56,7 +56,13 @@ theme_override_constants/separation = 10
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.58, 0.62, 1)
 theme_override_font_sizes/font_size = 18
-text = "CONTRACT RUN — derelict stub"
+text = "CONTRACT RUN — derelict"
+
+[node name="HudLabel" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.55, 0.45, 1)
+text = "Room — O₂"
 
 [node name="RoomLabel" type="Label" parent="Margin/VBox"]
 unique_name_in_owner = true
@@ -69,18 +75,33 @@ text = "..."
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Encounter" type="Button" parent="Margin/VBox"]
+[node name="StepButton" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
-text = "Investigate movement"
+text = "Step into room"
+
+[node name="FightButton" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Engage hostile"
+
+[node name="ContinueButton" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Continue to next room"
 
 [node name="Extract" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
-text = "Extract with samples (win stub)"
+text = "Extract with samples"
 
 [node name="Abort" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Abort — back to ship"
 
-[connection signal="pressed" from="Margin/VBox/Encounter" to="." method="_on_encounter_pressed"]
+[connection signal="pressed" from="Margin/VBox/StepButton" to="." method="_on_step_pressed"]
+[connection signal="pressed" from="Margin/VBox/FightButton" to="." method="_on_fight_pressed"]
+[connection signal="pressed" from="Margin/VBox/ContinueButton" to="." method="_on_continue_pressed"]
 [connection signal="pressed" from="Margin/VBox/Extract" to="." method="_on_extract_pressed"]
 [connection signal="pressed" from="Margin/VBox/Abort" to="." method="_on_abort_pressed"]

@@ -6,29 +6,39 @@ extends Control
 @onready var _ally_hp: Label = %AllyHpLabel
 @onready var _scan_label: Label = %ScanLabel
 @onready var _bond_button: Button = %Bond
+@onready var _leave_button: Button = %Leave
 
 var _engine: BattleEngine
+var _wild_species_id: String = "hullmite"
+var _room_resolved: bool = false
 
 
 func _ready() -> void:
 	_engine = BattleEngine.new()
 	_engine.state_changed.connect(_on_battle_state_changed)
 	_engine.battle_ended.connect(_on_battle_ended)
-	_start_hullmite_encounter()
+	_start_encounter()
 	_refresh_hud()
 	_flush_log()
 
 
-func _start_hullmite_encounter() -> void:
+func _start_encounter() -> void:
 	var team: Array = []
 	team.append(GameState.party["lead"].duplicate(true))
 	for bond in GameState.party["bonds"]:
 		if bond != null:
 			team.append(bond.duplicate(true))
-	if not GameState.run.get("active", false):
-		GameState.start_run()
-	GameState.spend_fight_o2()
-	_engine.start_encounter("hullmite", team)
+	_wild_species_id = GameState.consume_pending_wild()
+	if _wild_species_id == "":
+		_wild_species_id = "hullmite"
+	if GameState.run.get("active", false):
+		GameState.spend_fight_o2()
+	var scan_head := GameState.take_next_scan_bonus()
+	_engine.start_encounter(_wild_species_id, team, scan_head)
+	if scan_head > 0.0:
+		_engine.log_lines.append(
+			"> Breach scan bonus active (%d%% starting scan)." % int(round(scan_head * 100.0))
+		)
 
 
 func _on_attack_pressed() -> void:
@@ -47,9 +57,7 @@ func _on_bond_pressed() -> void:
 
 
 func _on_leave_pressed() -> void:
-	_engine.player_flee()
-	_sync_party_hp()
-	get_tree().change_scene_to_file("res://scenes/run_stub.tscn")
+	_finish_and_return()
 
 
 func _after_action() -> void:
@@ -67,9 +75,29 @@ func _on_battle_ended(_victory: bool, did_bond: bool) -> void:
 	_refresh_hud()
 	_sync_party_hp()
 	if did_bond:
-		var captured := GameState.make_combatant("hullmite", "Hullmite")
+		var sid := str(_engine.wild.get("species_id", _wild_species_id))
+		var captured := GameState.make_combatant(sid)
 		GameState.add_to_stable(captured)
+		_resolve_room_after_fight()
+	if _victory and not did_bond:
+		_resolve_room_after_fight()
 	_set_actions_enabled(not _engine.battle_over)
+	_leave_button.disabled = false
+
+
+func _resolve_room_after_fight() -> void:
+	if _room_resolved:
+		return
+	_room_resolved = true
+	GameState.complete_current_room()
+
+
+func _finish_and_return() -> void:
+	_sync_party_hp()
+	if GameState.run.get("active", false) and bool(GameState.run.get("in_room", false)):
+		if not _room_resolved and _engine.battle_over:
+			_resolve_room_after_fight()
+	get_tree().change_scene_to_file("res://scenes/run_stub.tscn")
 
 
 func _refresh_hud() -> void:
