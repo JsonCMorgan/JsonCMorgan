@@ -1,0 +1,14 @@
+id: relay_scope_v1
+fixerTone: minimal
+slots:
+  - client
+  - org
+  - objective
+  - scope_line
+  - payout_credits
+subjectTemplate: "JOB // {{title}} // {{client}}"
+bodyTemplate:
+  - "Client authorized external pentest. {{client}} pays on deliverables."
+  - "{{scope_line}}"
+  - "Objective: {{objective}}"
+  - "Stay in scope. SOC will correlate noisy tools. {{payout_credits}} credits on completion."

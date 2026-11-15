@@ -1,0 +1,19 @@
+{
+  "archetypeId": "recon",
+  "fixerId": "relay",
+  "grammarId": "relay_scope_v1",
+  "killChainTemplate": "K1_recon_only",
+  "clientFiction": "NorthPeak",
+  "objectiveSummary": "Fingerprint authorized edge assets with nmap -sV; document scope and open services for SOC correlation.",
+  "trainingTags": { "sscpDomains": [3, 6] },
+  "mail": {
+    "subject": "JOB // Edge Survey // NorthPeak",
+    "body": [
+      "Client authorized external pentest. NorthPeak pays on deliverables.",
+      "Scope: authorized pentest window only. No lateral movement until broker clears pivot.",
+      "Objective: service detection on edge gateway; record open ports and service versions.",
+      "Stay in scope. SOC will correlate noisy tools. 700 credits on completion."
+    ]
+  },
+  "meta": { "seed": "golden", "generatedBy": "fallback-grammar" }
+}

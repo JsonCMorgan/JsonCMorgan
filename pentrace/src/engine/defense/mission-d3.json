@@ -1,0 +1,92 @@
+{
+  "id": "d3-geo-escalate",
+  "ticketId": "BT-2026-0107",
+  "title": "Impossible Commute: Escalate to L2",
+  "client": "Contoso",
+  "expectedDisposition": "escalate",
+  "mitre": "T1078.004",
+  "slaMinutes": 20,
+  "xp": 70,
+  "socsearchOutput": [
+    "search index=signin earliest=-24h client=Contoso user=j.alvarez",
+    "| table _time, src_ip, country, result",
+    "",
+    "_time     src_ip           country    result",
+    "03:36:10  203.0.113.77     Romania    FAIL bad password",
+    "03:37:02  203.0.113.77     Romania    FAIL bad password",
+    "03:38:45  203.0.113.77     Romania    FAIL bad password",
+    "03:41:19  203.0.113.77     Romania    SUCCESS (MFA push approved)",
+    "",
+    "NOTE: user's baseline is US only. Success right after failures, from a country never seen before."
+  ],
+  "caseFiles": [
+    {
+      "path": "/home/ghost/cases/contoso-signin.log",
+      "lines": [
+        "2026-11-09T17:02:11Z user=j.alvarez src=198.51.100.20 country=US city=Denver result=SUCCESS mfa=push",
+        "2026-11-10T08:05:40Z user=j.alvarez src=198.51.100.20 country=US city=Denver result=SUCCESS mfa=push",
+        "2026-11-11T03:36:10Z user=j.alvarez src=203.0.113.77 country=RO city=Bucharest result=FAIL reason=bad_password",
+        "2026-11-11T03:37:02Z user=j.alvarez src=203.0.113.77 country=RO city=Bucharest result=FAIL reason=bad_password",
+        "2026-11-11T03:38:45Z user=j.alvarez src=203.0.113.77 country=RO city=Bucharest result=FAIL reason=bad_password",
+        "2026-11-11T03:41:19Z user=j.alvarez src=203.0.113.77 country=RO city=Bucharest result=SUCCESS mfa=push_approved",
+        "2026-11-11T03:43:02Z user=j.alvarez src=203.0.113.77 country=RO action=new_inbox_rule name=\".\" forward=external"
+      ]
+    },
+    {
+      "path": "/home/ghost/cases/contoso-user-baseline.txt",
+      "lines": [
+        "USER BASELINE // j.alvarez (Contoso finance)",
+        "usual location: Denver, US (198.51.100.20)",
+        "usual hours: Mon-Fri 08:00-18:00 local",
+        "travel on file: none",
+        "MFA: push to registered phone"
+      ]
+    }
+  ],
+  "noteEvidence": [
+    {
+      "label": "user",
+      "any": [
+        "j.alvarez",
+        "alvarez"
+      ]
+    },
+    {
+      "label": "source IP",
+      "any": [
+        "203.0.113.77"
+      ]
+    },
+    {
+      "label": "new country",
+      "any": [
+        "Romania",
+        "RO",
+        "Bucharest"
+      ]
+    },
+    {
+      "label": "time window",
+      "any": [
+        "03:3",
+        "03:4"
+      ]
+    }
+  ],
+  "noteSuggestion": "j.alvarez: 3 fails then SUCCESS from 203.0.113.77 (Romania) 03:36-03:41 UTC, MFA push approved, new inbox forward rule. Possible ATO, revoke sessions",
+  "wrong": {
+    "tp": "Closed it yourself as a true positive. A live account takeover needs containment (revoke sessions, reset, call the user), which is L2's call. The playbook says escalate with evidence.",
+    "fp": "Closed a likely account takeover as a false positive. No travel on file, a never-seen country, failures then success, and a new forwarding rule: that is real."
+  },
+  "triageBullets": [
+    "Success right after failures, from a new country, outside working hours.",
+    "MFA push approved at 03:41: possible MFA fatigue. The inbox forward rule is a classic post-compromise move.",
+    "L2 contains: revoke sessions, reset the password, remove the rule, call the user."
+  ],
+  "lessons": [
+    "A success after failures, from a new country, at odd hours is a possible account takeover.",
+    "Escalate when containment needs L2 authority, like revoking sessions and resetting the account.",
+    "The escalation note is the handoff: user, IP, country and time window, so L2 can act without re-investigating.",
+    "A new inbox forwarding rule right after a suspicious login is a classic post-compromise move."
+  ]
+}
