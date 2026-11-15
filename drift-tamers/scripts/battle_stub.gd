@@ -89,6 +89,7 @@ func _resolve_room_after_fight() -> void:
 	if _room_resolved:
 		return
 	_room_resolved = true
+	GameState.note_fight_won(GameState.current_fight_is_elite())
 	GameState.complete_current_room()
 
 

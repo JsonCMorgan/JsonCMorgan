@@ -1,0 +1,28 @@
+{
+  "id": "recovery",
+  "type_number": 3,
+  "display_name": "Recovery",
+  "board_title": "Vault 7 — Asset Lift",
+  "unlocked": true,
+  "briefing": "Client buried prototypes in a sealed vault. Corp security declared the derelict 'unrecoverable.' That is your cue.\n\nEngineer: \"If it hums, bag it. If it bites, scan it.\"",
+  "beats": {
+    "insert": "ALARM // Dead, except the one corridor bulb that refuses to dignify quitting. Metal taste. Someone dropped blood and expensive tools.",
+    "complication": "LOCKER // Vault handshake fails twice. Either sabotage or the decay god has a sense of humor. Timer on the mag-seals is fiction, but believable fiction.",
+    "crisis": "WEIGHT // Everything worth taking is behind the nest signature. Xen moved in after the suits left. Classic."
+  },
+  "debrief": {
+    "win": "Vault samples plus bonus consumables. Client transfers fast money and slow trust. Hullmite polishes its shell like it helped.",
+    "partial": "You left with pockets, not the whole cache. Client calls it 'acceptable leakage.' Finance calls it Tuesday.",
+    "fail": "Hands empty, pride dented. Crew votes to pretend the abort was tactical. It was not."
+  },
+  "modifiers": {
+    "extra_fight": false,
+    "deep_scan": false,
+    "extract_bonus": 40,
+    "loot_room_bias": true
+  },
+  "win_flags": {
+    "primary": "assets_secured",
+    "win_min_consumables": 1
+  }
+}

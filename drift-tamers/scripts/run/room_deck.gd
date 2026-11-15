@@ -82,14 +82,36 @@ const WILD_WEIGHTS_ELITE_DEEP: Array = [
 ]
 
 
-static func build_deck(contract_id: String) -> Array:
+static func build_deck(mission_id: String, mission: Dictionary = {}) -> Array:
 	var deck: Array = []
 	for template_id in BASE_TEMPLATES:
 		deck.append(template_id)
-	if contract_id == "corp_audit":
+	var mods = mission.get("modifiers", {})
+	if not mods is Dictionary:
+		mods = {}
+	if bool(mods.get("extra_fight", false)):
 		deck.append("corridor_fight")
+	match mission_id:
+		_:
+			pass
 	deck.shuffle()
+	if mission_id == "rescue":
+		_bias_room_toward_front(deck, "galley_rest")
+	if mission_id == "survey":
+		_bias_room_toward_front(deck, "breach_scan")
+	if mission_id == "recovery":
+		_bias_room_toward_front(deck, "vault_loot")
 	return deck
+
+
+static func _bias_room_toward_front(deck: Array, room_id: String) -> void:
+	if not deck.has(room_id):
+		return
+	var idx := deck.find(room_id)
+	if idx <= 1:
+		return
+	deck.remove_at(idx)
+	deck.insert(mini(1, deck.size() - 1), room_id)
 
 
 static func template_title(template_id: String) -> String:
