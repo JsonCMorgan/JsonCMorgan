@@ -45,10 +45,10 @@ var bonded: bool = false
 var log_lines: Array[String] = []
 
 
-func start_encounter(wild_species_id: String, ally_snapshots: Array) -> void:
+func start_encounter(wild_species_id: String, ally_snapshots: Array, initial_scan: float = 0.0) -> void:
 	battle_over = false
 	bonded = false
-	scan_meter = 0.0
+	scan_meter = clampf(initial_scan, 0.0, 1.0)
 	wild_enraged = false
 	wild_pacified = false
 	log_lines.clear()

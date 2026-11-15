@@ -2,26 +2,43 @@
 
 Sci-fi roguelite monster tamer: a salvage crew boards derelicts, scans xeno fauna, and bonds aliens between tense jobs. Warm wit on the ship, Expanse-style grit in the wreck.
 
-**Phase 2a** adds `GameState`, species JSON, and a real turn battle vs a wild **Hullmite** (types, HP, scan meter, bond odds).
+**Phase 2a** added `GameState`, species JSON, and turn battles with scan and bond.
+
+**Phase 2b** adds the **contract board**, **5-room run loop**, O₂ pressure, weighted wild encounters, and extract / abort payouts.
 
 ## Open in Godot
 
 1. Install **[Godot 4.3+](https://godotengine.org/download)** (4.x with GL Compatibility is fine).
 2. In the Project Manager, **Import** → select this folder’s `project.godot`.
-3. Press **F5** (Play). Flow: **Ship Hub** → **Derelict run** → **Battle** (Attack / Scan / Bond).
+3. Press **F5** (Play). Flow: **Ship Hub** → pick a **contract** → **Derelict run** (rooms) → **Battle** when fights trigger.
 
 Pixel defaults are set in `project.godot`: **640×360** viewport, canvas stretch, **integer** scale mode, **nearest** texture filter, and 2D pixel snap.
 
-## Phase 2a manual test (Hullmite fight)
+## Phase 2b manual test
 
 1. **F5** from `ship_hub.tscn` (main scene).
-2. **Start contract** → on the run screen, note **O₂** in the room label (starts at 100 after `GameState.start_run()`).
-3. **Trigger encounter** → battle loads a wild **Hullmite** (Kinetic).
-4. **Scan** twice to reach ~70% scan (35% per Scan). Log should show element and bond flavor text.
-5. **Attack** until wild HP is low. Watch for **Type advantage!** / **Not very effective...** (Kinetic vs Kinetic is neutral).
-6. **Bond** after scan ≥ 50%. Log shows roll vs computed odds; success adds the xeno to `user://stable.json` via `GameState.add_to_stable()`.
-7. Confirm HUD: **Wild HP**, **Crew** HP (Spacer + bonded Hullmite), **Scan %**.
-8. **Leave encounter** returns to the run stub; **Extract** or **Abort** calls `GameState.end_run()`.
+2. On the hub, read the **warm status line** and pick one of three contracts:
+   - **Standard Salvage** — 5 shuffled rooms, 100 O₂.
+   - **Corp Audit** — same deck **plus one extra corridor fight** (6 rooms).
+   - **Deep Scan** — **85 O₂ cap**; wild spawns use the rare table (Cryptid possible).
+3. On the run screen, confirm **Room N / Total** and **O₂ current / max** in the HUD.
+4. **Step into room** — pays **−8 O₂** per room. If O₂ hits **0**, you are forced back to hub (no contract bonus).
+5. **Non-fight rooms:** breach scan (+40% scan on next battle), galley rest (+15% HP, +5 O₂), vault loot (+1 consumable for payout).
+6. **Fight rooms:** **Engage hostile** → battle spends **−5 O₂**; wild species is rolled from the JSON pool (elite nest uses the rare table).
+7. **Scan** / **Attack** / **Bond** as in Phase 2a; successful bond adds the **actual wild species** to `user://stable.json`.
+8. After a fight, **Leave encounter** returns to the run; room advances when the fight resolves.
+9. **Extract** unlocks from **room 3 onward** (`room_index >= 2` before stepping in). Grants partial credits plus contract extract bonus.
+10. **Abort** returns to hub with partial payout only (rooms cleared × 15 credits). Hub copy should reflect extract vs abort vs O₂ fail.
+
+### Room templates (v1)
+
+| Template | Effect |
+|----------|--------|
+| `corridor_fight` | Wild encounter |
+| `breach_scan` | +40% scan on next battle |
+| `galley_rest` | +15% team HP, +5 O₂ |
+| `vault_loot` | +1 consumable |
+| `nest_elite` | Fight with elite spawn table |
 
 ### Type chart (v1)
 
@@ -52,6 +69,7 @@ drift-tamers/
     autoload/      # game_state.gd
     combat/        # battle_engine.gd
     data/          # species_data.gd, species_registry.gd
+    run/           # room_deck.gd
   CREDITS.md       # Intended CC0 sources
 ```
 
