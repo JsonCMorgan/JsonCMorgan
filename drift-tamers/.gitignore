@@ -2,10 +2,11 @@
 .godot/
 *.translation
 export.cfg
-export_presets.cfg
 *.import
 
 # OS / IDE
 .DS_Store
 *.swp
 .idea/
+# Export output
+build/
