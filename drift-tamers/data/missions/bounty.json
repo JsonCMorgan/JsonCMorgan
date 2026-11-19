@@ -20,6 +20,14 @@
     "deep_scan": false,
     "extract_bonus": 45
   },
+  "costs": {
+    "fuel": 16
+  },
+  "payout": {
+    "win": { "credits": 190, "parts": 2, "research": 0, "morale": 5 },
+    "partial": { "credits": 80, "parts": 1, "research": 0, "morale": 0 },
+    "fail": { "credits": 25, "parts": 0, "research": 0, "morale": -10 }
+  },
   "win_flags": {
     "primary": "target_neutralized"
   }

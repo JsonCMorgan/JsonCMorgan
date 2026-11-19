@@ -21,6 +21,14 @@
     "extract_bonus": 40,
     "loot_room_bias": true
   },
+  "costs": {
+    "fuel": 14
+  },
+  "payout": {
+    "win": { "credits": 120, "parts": 5, "research": 1, "morale": 6 },
+    "partial": { "credits": 60, "parts": 2, "research": 0, "morale": 1 },
+    "fail": { "credits": 15, "parts": 1, "research": 0, "morale": -8 }
+  },
   "win_flags": {
     "primary": "assets_secured",
     "win_min_consumables": 1

@@ -27,90 +27,238 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 10
 
-[node name="Scroll" type="ScrollContainer" parent="Margin"]
+[node name="Root" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ResourceBar" type="PanelContainer" parent="Margin/Root"]
+layout_mode = 2
+
+[node name="ResourceBox" type="VBoxContainer" parent="Margin/Root/ResourceBar"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="ResourceLabel" type="Label" parent="Margin/Root/ResourceBar/ResourceBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.72, 0.43, 1)
+theme_override_font_sizes/font_size = 13
+text = "CR 0   FUEL 0   PARTS 0   RSRCH 0   MRL 0"
+
+[node name="BarkLabel" type="Label" parent="Margin/Root/ResourceBar/ResourceBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.72, 0.82, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "..."
+
+[node name="Tabs" type="HBoxContainer" parent="Margin/Root"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="MissionsTab" type="Button" parent="Margin/Root/Tabs"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+button_pressed = true
+text = "Missions"
+
+[node name="StableTab" type="Button" parent="Margin/Root/Tabs"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Stable"
+
+[node name="ShipTab" type="Button" parent="Margin/Root/Tabs"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Ship"
+
+[node name="NoticeLabel" type="Label" parent="Margin/Root"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.9, 0.55, 0.35, 1)
+theme_override_font_sizes/font_size = 11
+text = ""
+
+[node name="Scroll" type="ScrollContainer" parent="Margin/Root"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="VBox" type="VBoxContainer" parent="Margin/Scroll"]
+[node name="Sections" type="VBoxContainer" parent="Margin/Root/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 8
 
-[node name="Title" type="Label" parent="Margin/Scroll/VBox"]
+[node name="MissionsSection" type="VBoxContainer" parent="Margin/Root/Scroll/Sections"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.78, 0.55, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 18
 text = "Drift Tamers — Ship Hub"
 
-[node name="Flavor" type="Label" parent="Margin/Scroll/VBox"]
+[node name="Flavor" type="Label" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 layout_mode = 2
 autowrap_mode = 3
 theme_override_colors/font_color = Color(0.82, 0.85, 0.88, 1)
+theme_override_font_sizes/font_size = 12
 text = "The *Merrifield* smells like reheated protein and honest engines. Someone left a mug on the nav console again. Good."
 
-[node name="MemoryLabel" type="Label" parent="Margin/Scroll/VBox"]
+[node name="MemoryLabel" type="Label" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 unique_name_in_owner = true
 layout_mode = 2
 autowrap_mode = 3
 theme_override_colors/font_color = Color(0.55, 0.65, 0.7, 1)
+theme_override_font_sizes/font_size = 11
 text = ""
 
-[node name="StatusLabel" type="RichTextLabel" parent="Margin/Scroll/VBox"]
+[node name="StatusLabel" type="RichTextLabel" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 44)
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 theme_override_colors/default_color = Color(0.65, 0.75, 0.85, 1)
+theme_override_font_sizes/normal_font_size = 12
 text = "..."
 
-[node name="MetaLabel" type="Label" parent="Margin/Scroll/VBox"]
+[node name="PayoutLabel" type="Label" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.58, 0.68, 0.72, 1)
-text = "..."
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.6, 0.82, 0.62, 1)
+theme_override_font_sizes/font_size = 11
+text = ""
 
-[node name="MissionsTitle" type="Label" parent="Margin/Scroll/VBox"]
+[node name="MissionsTitle" type="Label" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.72, 0.5, 1)
+theme_override_font_sizes/font_size = 14
 text = "Mission board (v1)"
 
-[node name="MissionList" type="VBoxContainer" parent="Margin/Scroll/VBox"]
+[node name="MissionList" type="VBoxContainer" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="BriefingLabel" type="RichTextLabel" parent="Margin/Scroll/VBox"]
+[node name="BriefingLabel" type="RichTextLabel" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 72)
+custom_minimum_size = Vector2(0, 64)
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 theme_override_colors/default_color = Color(0.78, 0.8, 0.82, 1)
+theme_override_font_sizes/normal_font_size = 12
 text = "[i]Select a mission for briefing.[/i]"
 
-[node name="DeployButton" type="Button" parent="Margin/Scroll/VBox"]
+[node name="DeployButton" type="Button" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 text = "Deploy crew"
 disabled = true
 
-[node name="LockedTitle" type="Label" parent="Margin/Scroll/VBox"]
+[node name="LockedTitle" type="Label" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.45, 0.48, 0.52, 1)
 theme_override_font_sizes/font_size = 12
 text = "Future ops (Phase 4)"
 
-[node name="LockedList" type="VBoxContainer" parent="Margin/Scroll/VBox"]
+[node name="LockedList" type="VBoxContainer" parent="Margin/Root/Scroll/Sections/MissionsSection"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[connection signal="pressed" from="Margin/Scroll/VBox/DeployButton" to="." method="_on_deploy_pressed"]
+[node name="StableSection" type="VBoxContainer" parent="Margin/Root/Scroll/Sections"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Margin/Root/Scroll/Sections/StableSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.55, 1)
+theme_override_font_sizes/font_size = 18
+text = "Stable"
+
+[node name="Flavor" type="Label" parent="Margin/Root/Scroll/Sections/StableSection"]
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.82, 0.85, 0.88, 1)
+theme_override_font_sizes/font_size = 12
+text = "Aft bay, warm lamps, too many feeding schedules taped to the wall. Release sends one back to the dark and costs the crew a little."
+
+[node name="StableNote" type="Label" parent="Margin/Root/Scroll/Sections/StableSection"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.55, 0.65, 0.7, 1)
+theme_override_font_sizes/font_size = 11
+text = ""
+
+[node name="StableList" type="VBoxContainer" parent="Margin/Root/Scroll/Sections/StableSection"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ShipSection" type="VBoxContainer" parent="Margin/Root/Scroll/Sections"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Margin/Root/Scroll/Sections/ShipSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.55, 1)
+theme_override_font_sizes/font_size = 18
+text = "Ship modules"
+
+[node name="Flavor" type="Label" parent="Margin/Root/Scroll/Sections/ShipSection"]
+layout_mode = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.82, 0.85, 0.88, 1)
+theme_override_font_sizes/font_size = 12
+text = "Hale keeps a wish list on the bulkhead in grease pencil. Modules change how a run plays, not just the numbers."
+
+[node name="ModuleList" type="VBoxContainer" parent="Margin/Root/Scroll/Sections/ShipSection"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SupplyTitle" type="Label" parent="Margin/Root/Scroll/Sections/ShipSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.72, 0.5, 1)
+theme_override_font_sizes/font_size = 14
+text = "Supplies"
+
+[node name="FuelButton" type="Button" parent="Margin/Root/Scroll/Sections/ShipSection"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+text = "Buy fuel cell"
+
+[node name="SiphonButton" type="Button" parent="Margin/Root/Scroll/Sections/ShipSection"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+text = "Siphon the reserves"

@@ -2,10 +2,27 @@ extends Node
 ## Persistent meta, active run, party, and stable save stub.
 
 const STABLE_SAVE_PATH := "user://stable.json"
+const SAVE_VERSION := 2
 const O2_START := 100
 const O2_START_DEEP_SCAN := 85
 const O2_PER_ROOM := 8
 const O2_PER_FIGHT := 5
+
+const START_CREDITS := 120
+const START_FUEL := 24
+const START_PARTS := 4
+const START_RESEARCH := 0
+const START_MORALE := 62
+const MORALE_MAX := 100
+const DEFAULT_FUEL_COST := 12
+
+const FUEL_CELL_FUEL := 10
+const FUEL_CELL_CREDITS := 40
+const SIPHON_FUEL := 6
+const SIPHON_MORALE := 6
+const RELEASE_RESEARCH := 2
+const RELEASE_MORALE := 4
+const SALVAGE_CREDITS_PER_ROOM := 5
 
 const HUB_LINES: Dictionary = {
 	"idle": "Jobs board green. Crew owes you one decent run.",
@@ -16,8 +33,43 @@ const HUB_LINES: Dictionary = {
 	"run_clear": "Full deck cleared. Even the derelict sounds impressed. Tea's on Cookie.",
 }
 
+const MORALE_TIERS: Array = [
+	{"id": "stoked", "min": 80, "label": "Stoked"},
+	{"id": "solid", "min": 55, "label": "Solid"},
+	{"id": "frayed", "min": 30, "label": "Frayed"},
+	{"id": "grim", "min": 0, "label": "Grim"},
+]
+
+const MORALE_BARKS: Dictionary = {
+	"stoked": [
+		"Cookie baked actual bread. Hale is humming. Nobody has mentioned the fuel bill once.",
+		"Crew is running drills for fun. Someone painted a mascot on the airlock and it is genuinely good.",
+		"Morale is high enough that the coffee tastes intentional.",
+	],
+	"solid": [
+		"Steady ship. Two complaints logged, both about the kettle.",
+		"Hale says the drive sounds happy. That is as close to a compliment as the drive gets.",
+		"Everyone is fed, nobody is bleeding, the board has work. Good day.",
+	],
+	"frayed": [
+		"Nobody is singing. Cookie is rationing the good tea, which is how you know.",
+		"Hale fixed the same panel twice and did not mention it. That is a tell.",
+		"Crew is tired. Still showing up, but tired.",
+	],
+	"grim": [
+		"The galley is quiet in the way that is not restful.",
+		"Hale left a note instead of talking. It reads 'fix the ship or fix the crew.'",
+		"Morale is thin. One more bad run and somebody takes a contract elsewhere.",
+	],
+}
+
 var meta: Dictionary = {
-	"credits": 0,
+	"credits": START_CREDITS,
+	"fuel": START_FUEL,
+	"parts": START_PARTS,
+	"research": START_RESEARCH,
+	"morale": START_MORALE,
+	"modules": [],
 	"reputation_independence": 0,
 	"reputation_corp": 0,
 	"missions_unlocked": ["survey", "rescue", "recovery", "bounty", "escort"],
@@ -51,6 +103,11 @@ var stable: Array = []
 var last_hub_line_key: String = "idle"
 var last_debrief: String = ""
 var last_mission_memory: String = ""
+var last_payout_summary: String = ""
+var last_outcome: String = ""
+
+var _bark_tier: String = ""
+var _bark_line: String = ""
 
 
 func _ready() -> void:
@@ -74,6 +131,213 @@ func mission_ids_for_board() -> PackedStringArray:
 	return out if out.size() > 0 else ids
 
 
+## --- Resources -------------------------------------------------------------
+
+
+func resource_amount(key: String) -> int:
+	return int(meta.get(key, 0))
+
+
+func resource_bar_text() -> String:
+	return "CR %d   FUEL %d   PARTS %d   RSRCH %d   MRL %d" % [
+		resource_amount("credits"),
+		resource_amount("fuel"),
+		resource_amount("parts"),
+		resource_amount("research"),
+		resource_amount("morale"),
+	]
+
+
+func mission_fuel_cost(mission_id: String) -> int:
+	var mission := get_mission(mission_id)
+	var costs = mission.get("costs", {})
+	if not costs is Dictionary:
+		return DEFAULT_FUEL_COST
+	return int(costs.get("fuel", DEFAULT_FUEL_COST))
+
+
+func cheapest_mission_fuel_cost() -> int:
+	var cheapest := DEFAULT_FUEL_COST
+	var first := true
+	for mid in mission_ids_for_board():
+		var cost := mission_fuel_cost(str(mid))
+		if first or cost < cheapest:
+			cheapest = cost
+			first = false
+	return cheapest
+
+
+func can_deploy(mission_id: String) -> Dictionary:
+	var cost := mission_fuel_cost(mission_id)
+	var fuel := resource_amount("fuel")
+	if fuel >= cost:
+		return {"ok": true, "message": "", "cost": cost}
+	var mission := get_mission(mission_id)
+	var title := str(mission.get("display_name", mission_id))
+	var message := (
+		"Tanks read %d units. The %s burn needs %d. Hale will not light the drive on fumes, "
+		+ "and Cookie's still does not count as jet fuel."
+	) % [fuel, title, cost]
+	return {"ok": false, "message": message, "cost": cost}
+
+
+## Spends fuel and starts the mission. Returns {ok, message, cost}.
+func try_deploy(mission_id: String) -> Dictionary:
+	var check := can_deploy(mission_id)
+	if not bool(check.get("ok", false)):
+		return check
+	var cost := int(check.get("cost", DEFAULT_FUEL_COST))
+	_add_resource("fuel", -cost)
+	start_run(mission_id)
+	save_game()
+	return {"ok": true, "message": "Burned %d fuel breaking dock." % cost, "cost": cost}
+
+
+func fuel_cell_label() -> String:
+	return "Buy fuel cell (+%d fuel / %d cr)" % [FUEL_CELL_FUEL, FUEL_CELL_CREDITS]
+
+
+func can_buy_fuel_cell() -> bool:
+	return resource_amount("credits") >= FUEL_CELL_CREDITS
+
+
+func buy_fuel_cell() -> String:
+	if not can_buy_fuel_cell():
+		return "Not enough credits. The depot takes cash, sympathy, and nothing else."
+	_add_resource("credits", -FUEL_CELL_CREDITS)
+	_add_resource("fuel", FUEL_CELL_FUEL)
+	save_game()
+	return "One fuel cell aboard. Hale signs for it without reading, as usual."
+
+
+## Last-resort fuel so a broke crew is never stranded at dock.
+func siphon_available() -> bool:
+	return not can_buy_fuel_cell() and resource_amount("fuel") < cheapest_mission_fuel_cost()
+
+
+func siphon_label() -> String:
+	return "Siphon the reserves (+%d fuel / -%d morale)" % [SIPHON_FUEL, SIPHON_MORALE]
+
+
+func siphon_reserves() -> String:
+	if not siphon_available():
+		return "No need to touch the reserves yet."
+	_add_resource("fuel", SIPHON_FUEL)
+	adjust_morale(-SIPHON_MORALE)
+	save_game()
+	return "Cookie drains the backup still into the tanks and looks at you the whole time."
+
+
+## --- Ship modules ----------------------------------------------------------
+
+
+func owned_modules() -> Array:
+	var mods = meta.get("modules", [])
+	return mods if mods is Array else []
+
+
+func has_module(module_id: String) -> bool:
+	return module_id in owned_modules()
+
+
+func can_buy_module(module_id: String) -> bool:
+	var module := ShipModules.get_module(module_id)
+	if module.is_empty() or has_module(module_id):
+		return false
+	return (
+		resource_amount("credits") >= int(module.get("cost_credits", 0))
+		and resource_amount("parts") >= int(module.get("cost_parts", 0))
+	)
+
+
+func buy_module(module_id: String) -> String:
+	var module := ShipModules.get_module(module_id)
+	if module.is_empty():
+		return "No such module on the manifest."
+	if has_module(module_id):
+		return "%s is already bolted on." % str(module.get("display_name", module_id))
+	if not can_buy_module(module_id):
+		return "Short on parts or credits for the %s. Hale can wait, grumpily." % str(
+			module.get("display_name", module_id)
+		)
+	_add_resource("credits", -int(module.get("cost_credits", 0)))
+	_add_resource("parts", -int(module.get("cost_parts", 0)))
+	var mods := owned_modules()
+	mods.append(module_id)
+	meta["modules"] = mods
+	adjust_morale(3)
+	save_game()
+	return "%s installed. %s" % [str(module.get("display_name", module_id)), str(module.get("blurb", ""))]
+
+
+func module_scan_bonus() -> float:
+	return ShipModules.SCANNER_ARRAY_SCAN_BONUS if has_module("scanner_array") else 0.0
+
+
+func o2_max_for_run(deep_scan: bool) -> int:
+	var base := O2_START_DEEP_SCAN if deep_scan else O2_START
+	if has_module("o2_scrubber"):
+		base += ShipModules.O2_SCRUBBER_MAX_BONUS
+	return base
+
+
+func o2_cost_per_room() -> int:
+	if has_module("o2_scrubber"):
+		return maxi(1, O2_PER_ROOM - ShipModules.O2_SCRUBBER_ROOM_SAVING)
+	return O2_PER_ROOM
+
+
+## --- Crew morale -----------------------------------------------------------
+
+
+func morale_tier() -> String:
+	var morale := resource_amount("morale")
+	for tier in MORALE_TIERS:
+		if morale >= int((tier as Dictionary).get("min", 0)):
+			return str((tier as Dictionary).get("id", "solid"))
+	return "grim"
+
+
+func morale_tier_label() -> String:
+	var tier_id := morale_tier()
+	for tier in MORALE_TIERS:
+		if str((tier as Dictionary).get("id", "")) == tier_id:
+			return str((tier as Dictionary).get("label", tier_id))
+	return tier_id.capitalize()
+
+
+## Warm bark for the hub. Stable until the morale tier changes.
+func crew_bark() -> String:
+	var tier_id := morale_tier()
+	if tier_id != _bark_tier or _bark_line == "":
+		var pool = MORALE_BARKS.get(tier_id, MORALE_BARKS["solid"])
+		if pool is Array and (pool as Array).size() > 0:
+			_bark_line = str((pool as Array).pick_random())
+		_bark_tier = tier_id
+	return _bark_line
+
+
+func adjust_morale(delta: int) -> void:
+	meta["morale"] = clampi(resource_amount("morale") + delta, 0, MORALE_MAX)
+
+
+func release_from_stable(index: int) -> String:
+	if index < 0 or index >= stable.size():
+		return ""
+	var creature = stable[index]
+	var name := "the xeno"
+	if creature is Dictionary:
+		name = str((creature as Dictionary).get("nickname", "the xeno"))
+	stable.remove_at(index)
+	_add_resource("research", RELEASE_RESEARCH)
+	adjust_morale(-RELEASE_MORALE)
+	save_game()
+	return (
+		"%s goes back to the dark. You logged the field notes (+%d research), and the galley "
+		+ "stays quiet for a while (-%d morale)."
+	) % [name, RELEASE_RESEARCH, RELEASE_MORALE]
+
+
 func start_run(mission_id: String = "survey") -> void:
 	var mission := get_mission(mission_id)
 	if mission.is_empty():
@@ -83,7 +347,7 @@ func start_run(mission_id: String = "survey") -> void:
 	if not mods is Dictionary:
 		mods = {}
 	var deep_scan := bool(mods.get("deep_scan", false))
-	var o2_max := O2_START_DEEP_SCAN if deep_scan else O2_START
+	var o2_max := o2_max_for_run(deep_scan)
 	run = {
 		"active": true,
 		"o2": o2_max,
@@ -107,6 +371,7 @@ func start_run(mission_id: String = "survey") -> void:
 	}
 	last_hub_line_key = "idle"
 	last_debrief = ""
+	last_payout_summary = ""
 	_reset_party_for_new_run()
 
 
@@ -213,33 +478,40 @@ func spend_fight_o2() -> void:
 	run["o2"] = maxi(0, int(run["o2"]) - O2_PER_FIGHT)
 
 
-func complete_current_room() -> void:
+## Returns a module effect line for the run log, or "" when nothing fired.
+func complete_current_room() -> String:
 	if not run.get("active", false):
-		return
+		return ""
 	run["rooms_cleared"] = int(run.get("rooms_cleared", 0)) + 1
 	run["in_room"] = false
 	run["room_index"] = int(run.get("room_index", 0)) + 1
+	if has_module("med_bay"):
+		_heal_party_percent(ShipModules.MED_BAY_HEAL_RATIO)
+		return "Med Bay cycles between rooms: +%d%% team HP." % int(
+			round(ShipModules.MED_BAY_HEAL_RATIO * 100.0)
+		)
+	return ""
 
 
 func extract_run() -> void:
 	var cleared_all := run_finished()
 	run["last_exit_kind"] = "run_clear" if cleared_all else "extract_partial"
-	_grant_partial_rewards(true)
 	_finalize_mission_debrief()
+	_grant_mission_payout(last_outcome, true)
 	_end_run_internal()
 
 
 func abort_run() -> void:
 	run["last_exit_kind"] = "abort"
-	_grant_partial_rewards(false)
 	_finalize_mission_debrief()
+	_grant_mission_payout(last_outcome, false)
 	_end_run_internal()
 
 
 func forced_o2_retreat() -> void:
 	run["last_exit_kind"] = "o2_fail"
-	_grant_partial_rewards(false)
 	_finalize_mission_debrief()
+	_grant_mission_payout(last_outcome, false)
 	_end_run_internal()
 
 
@@ -255,10 +527,14 @@ func hub_memory_line() -> String:
 	return ""
 
 
+func hub_payout_line() -> String:
+	return last_payout_summary
+
+
 func advance_room() -> void:
 	if not run.get("active", false):
 		return
-	run["o2"] = maxi(0, int(run["o2"]) - O2_PER_ROOM)
+	run["o2"] = maxi(0, int(run["o2"]) - o2_cost_per_room())
 
 
 func end_run() -> void:
@@ -276,6 +552,7 @@ func _finalize_mission_debrief() -> void:
 	if text == "":
 		text = str(HUB_LINES.get(str(run.get("last_exit_kind", "abort")), HUB_LINES["abort"]))
 	last_debrief = text
+	last_outcome = outcome
 	var display := str(mission.get("board_title", mission.get("display_name", mission_id)))
 	last_mission_memory = "%s — %s" % [display, outcome.capitalize()]
 	last_hub_line_key = "idle"
@@ -352,23 +629,48 @@ func _end_run_internal() -> void:
 	run["o2_max"] = O2_START
 
 
-func _grant_partial_rewards(full_extract: bool) -> void:
+## Mission payout: per-type table from JSON, scaled by outcome, plus salvage per room.
+func _grant_mission_payout(outcome: String, full_extract: bool) -> void:
+	var mission_id := str(run.get("mission_id", "survey"))
+	var mission := get_mission(mission_id)
+	var payouts = mission.get("payout", {})
+	if not payouts is Dictionary:
+		payouts = {}
+	var reward = payouts.get(outcome, payouts.get("partial", {}))
+	if not reward is Dictionary:
+		reward = {}
+
 	var cleared := int(run.get("rooms_cleared", 0))
-	var credits := cleared * 15
+	var credits := int(reward.get("credits", 0)) + cleared * SALVAGE_CREDITS_PER_ROOM
 	if full_extract:
-		var mission_id := str(run.get("mission_id", "survey"))
-		var mission := get_mission(mission_id)
 		var mods = mission.get("modifiers", {})
 		if mods is Dictionary:
 			credits += int(mods.get("extract_bonus", 25))
+	var parts := int(reward.get("parts", 0))
+	var research := int(reward.get("research", 0))
+	var morale := int(reward.get("morale", 0))
+
+	_add_resource("credits", credits)
+	_add_resource("parts", parts)
+	_add_resource("research", research)
+	adjust_morale(morale)
+
 	var consumables := int(run.get("consumables", 0))
-	meta["credits"] = int(meta.get("credits", 0)) + credits
 	if consumables > 0:
 		meta["reputation_independence"] = int(meta.get("reputation_independence", 0)) + consumables
 
+	last_payout_summary = "Payout: %+d cr, %+d parts, %+d research, morale %+d" % [
+		credits, parts, research, morale
+	]
+	save_game()
+
+
+func _add_resource(key: String, delta: int) -> void:
+	meta[key] = maxi(0, int(meta.get(key, 0)) + delta)
+
 
 func _apply_room_o2() -> void:
-	run["o2"] = maxi(0, int(run["o2"]) - O2_PER_ROOM)
+	run["o2"] = maxi(0, int(run["o2"]) - o2_cost_per_room())
 
 
 func _resolve_non_fight_room(room_id: String) -> String:
@@ -440,15 +742,21 @@ func add_to_stable(creature: Dictionary) -> void:
 	if creature.is_empty():
 		return
 	stable.append(creature.duplicate(true))
-	_save_stable()
+	save_game()
 
 
-func _save_stable() -> void:
+## Stable plus meta resources share one save file (v1 saves still load).
+func save_game() -> void:
 	var file := FileAccess.open(STABLE_SAVE_PATH, FileAccess.WRITE)
 	if file == null:
-		push_warning("GameState: could not write stable save")
+		push_warning("GameState: could not write save")
 		return
-	file.store_string(JSON.stringify({"stable": stable}, "\t"))
+	var payload := {
+		"version": SAVE_VERSION,
+		"stable": stable,
+		"meta": meta,
+	}
+	file.store_string(JSON.stringify(payload, "\t"))
 
 
 func _load_stable() -> void:
@@ -459,5 +767,30 @@ func _load_stable() -> void:
 	if file == null:
 		return
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if parsed is Dictionary and parsed.get("stable") is Array:
-		stable = parsed["stable"]
+	if not parsed is Dictionary:
+		return
+	var data := parsed as Dictionary
+	if data.get("stable") is Array:
+		stable = data["stable"]
+	var saved = data.get("meta", {})
+	if saved is Dictionary:
+		_merge_saved_meta(saved as Dictionary)
+
+
+func _merge_saved_meta(saved: Dictionary) -> void:
+	for key in ["credits", "fuel", "parts", "research", "morale"]:
+		if saved.has(key):
+			meta[key] = int(saved[key])
+	meta["morale"] = clampi(int(meta.get("morale", START_MORALE)), 0, MORALE_MAX)
+	for key in ["reputation_independence", "reputation_corp"]:
+		if saved.has(key):
+			meta[key] = int(saved[key])
+	if saved.get("modules") is Array:
+		var known := ShipModules.module_ids()
+		var owned: Array = []
+		for module_id in saved["modules"]:
+			if str(module_id) in known and not str(module_id) in owned:
+				owned.append(str(module_id))
+		meta["modules"] = owned
+	if saved.get("missions_unlocked") is Array:
+		meta["missions_unlocked"] = saved["missions_unlocked"]

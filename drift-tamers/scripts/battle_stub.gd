@@ -33,11 +33,17 @@ func _start_encounter() -> void:
 		_wild_species_id = "hullmite"
 	if GameState.run.get("active", false):
 		GameState.spend_fight_o2()
-	var scan_head := GameState.take_next_scan_bonus()
+	var room_scan := GameState.take_next_scan_bonus()
+	var module_scan := GameState.module_scan_bonus()
+	var scan_head := room_scan + module_scan
 	_engine.start_encounter(_wild_species_id, team, scan_head)
-	if scan_head > 0.0:
+	if module_scan > 0.0:
 		_engine.log_lines.append(
-			"> Breach scan bonus active (%d%% starting scan)." % int(round(scan_head * 100.0))
+			"> Scanner Array warm (+%d%% starting scan)." % int(round(module_scan * 100.0))
+		)
+	if room_scan > 0.0:
+		_engine.log_lines.append(
+			"> Breach scan bonus active (+%d%% starting scan)." % int(round(room_scan * 100.0))
 		)
 
 
