@@ -28,8 +28,8 @@ const HUB_LINES: Dictionary = {
 	"idle": "Jobs board green. Crew owes you one decent run.",
 	"extract_ok": "Airlock hisses. Samples stink like success. Cookie hid the good mugs again, but nobody's complaining.",
 	"extract_partial": "You made it out with data and bruises. The crew calls it 'field research.' Finance will call it something else.",
-	"abort": "Abort logged. Partial payout wired — next time we punch harder before the O₂ gauge sulks.",
-	"o2_fail": "O₂ hit zero. Forced retreat, mission bonus gone. Bonded xen and shame are yours to keep.",
+	"abort": "Abort logged. Partial payout wired — next time we punch harder before the O2 gauge sulks.",
+	"o2_fail": "O2 hit zero. Forced retreat, mission bonus gone. Bonded xen and shame are yours to keep.",
 	"run_clear": "Full deck cleared. Even the derelict sounds impressed. Tea's on Cookie.",
 }
 
@@ -433,7 +433,7 @@ func step_into_room() -> Dictionary:
 	_apply_room_o2()
 	result["o2_depleted"] = int(run["o2"]) <= 0
 	if result["o2_depleted"]:
-		result["message"] = "O₂ empty — forced retreat."
+		result["message"] = "O2 empty — forced retreat."
 		return result
 	run["in_room"] = true
 	var room_id := current_room_id()
@@ -686,7 +686,7 @@ func _resolve_non_fight_room(room_id: String) -> String:
 			run["o2"] = mini(int(run.get("o2_max", O2_START)), int(run["o2"]) + 5)
 			run["rest_rooms_found"] = int(run.get("rest_rooms_found", 0)) + 1
 			set_mission_flag("survivors_evacuated", int(run["rest_rooms_found"]) >= 1)
-			return "Crew rested: +15% team HP, +5 O₂."
+			return "Crew rested: +15% team HP, +5 O2."
 		"vault_loot":
 			run["consumables"] = int(run.get("consumables", 0)) + 1
 			set_mission_flag("assets_secured", true)

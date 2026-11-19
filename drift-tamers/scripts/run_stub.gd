@@ -1,5 +1,5 @@
 extends Control
-## Derelict run loop: room deck, O₂ pressure, extract / abort.
+## Derelict run loop: room deck, O2 pressure, extract / abort.
 
 @onready var _room_label: Label = %RoomLabel
 @onready var _hud_label: Label = %HudLabel
@@ -29,7 +29,7 @@ func _refresh_ui() -> void:
 	var mission_title := str(mission.get("display_name", "Mission"))
 	var room_num := int(GameState.run.get("room_index", 0)) + 1
 	var total := GameState.total_rooms()
-	_hud_label.text = "%s — Room %d / %d — O₂ %d / %d (-%d per room)" % [
+	_hud_label.text = "%s — Room %d / %d — O2 %d / %d (-%d per room)" % [
 		mission_title,
 		room_num,
 		maxi(1, total),
