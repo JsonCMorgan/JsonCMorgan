@@ -37,6 +37,9 @@ func _start_encounter() -> void:
 	var module_scan := GameState.module_scan_bonus()
 	var scan_head := room_scan + module_scan
 	_engine.start_encounter(_wild_species_id, team, scan_head)
+	var species := SpeciesRegistry.get_species(_wild_species_id)
+	var elite_tag := " (elite)" if GameState.current_fight_is_elite() else ""
+	$Margin/VBox/Header.text = "ENCOUNTER — %s%s" % [species.display_name if species else _wild_species_id, elite_tag]
 	if module_scan > 0.0:
 		_engine.log_lines.append(
 			"> Scanner Array warm (+%d%% starting scan)." % int(round(module_scan * 100.0))
@@ -101,6 +104,10 @@ func _resolve_room_after_fight() -> void:
 
 func _finish_and_return() -> void:
 	_sync_party_hp()
+	if _engine.battle_over and _engine.party_wiped():
+		GameState.abort_run()
+		get_tree().change_scene_to_file("res://scenes/ship_hub.tscn")
+		return
 	get_tree().change_scene_to_file("res://scenes/run_stub.tscn")
 
 

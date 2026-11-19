@@ -1,0 +1,47 @@
+name: Drift Tamers CI
+
+on:
+  pull_request:
+    paths:
+      - "drift-tamers/**"
+      - ".github/workflows/drift-tamers-ci.yml"
+      - ".github/actions/setup-godot/**"
+  workflow_dispatch:
+
+concurrency:
+  group: drift-tamers-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Import, unit tests, smoke runs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-godot
+      - name: Import, unit tests, ship smoke, mission smoke runs
+        run: drift-tamers/tests/run_tests.sh
+
+  web-export:
+    name: Web export
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-godot
+        with:
+          web-templates: "true"
+      - name: Export Web build
+        working-directory: drift-tamers
+        run: |
+          godot --headless --path . --editor --quit
+          mkdir -p build/web
+          godot --headless --path . --export-release Web build/web/index.html
+          test -s build/web/index.wasm && test -s build/web/index.pck
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drift-tamers-web
+          path: drift-tamers/build/web
+          retention-days: 7

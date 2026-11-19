@@ -1,0 +1,71 @@
+name: GitHub Pages
+
+# Publishes the same site the legacy "Deploy from branch: main /" build served
+# (Jekyll over the repo root, e.g. index.html and cafe-quiz/), plus the Drift Tamers
+# web build at /drift-tamers/play/. Requires Settings > Pages > Source = "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-godot
+        if: hashFiles('drift-tamers/export_presets.cfg') != ''
+        with:
+          web-templates: "true"
+
+      - name: Export Drift Tamers (Web, no threads)
+        if: hashFiles('drift-tamers/export_presets.cfg') != ''
+        working-directory: drift-tamers
+        run: |
+          godot --headless --path . --editor --quit
+          mkdir -p "$RUNNER_TEMP/play"
+          godot --headless --path . --export-release Web "$RUNNER_TEMP/play/index.html"
+          test -s "$RUNNER_TEMP/play/index.wasm"
+
+      - name: Keep game source out of the Jekyll site
+        run: rm -rf drift-tamers
+
+      - uses: actions/configure-pages@v5
+
+      - name: Build existing site with Jekyll (same as the legacy branch build)
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+
+      - name: Add game build
+        run: |
+          if [ -d "$RUNNER_TEMP/play" ]; then
+            sudo mkdir -p _site/drift-tamers/play
+            sudo cp -r "$RUNNER_TEMP/play/." _site/drift-tamers/play/
+          fi
+          ls -R _site | head -50
+
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

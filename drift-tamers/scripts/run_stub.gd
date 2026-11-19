@@ -1,5 +1,5 @@
 extends Control
-## Derelict run loop: room deck, O₂ pressure, extract / abort.
+## Derelict run loop: room deck, O2 pressure, extract / abort.
 
 @onready var _room_label: Label = %RoomLabel
 @onready var _hud_label: Label = %HudLabel
@@ -17,7 +17,7 @@ func _ready() -> void:
 		_room_label.text = "No active mission. Return to ship."
 		_set_nav_enabled(false)
 		return
-	if int(GameState.run.get("o2", 0)) <= 0 and not bool(GameState.run.get("in_room", false)):
+	if int(GameState.run.get("o2", 0)) <= 0:
 		GameState.forced_o2_retreat()
 		get_tree().change_scene_to_file("res://scenes/ship_hub.tscn")
 		return
@@ -29,7 +29,7 @@ func _refresh_ui() -> void:
 	var mission_title := str(mission.get("display_name", "Mission"))
 	var room_num := int(GameState.run.get("room_index", 0)) + 1
 	var total := GameState.total_rooms()
-	_hud_label.text = "%s — Room %d / %d — O₂ %d / %d (-%d per room)" % [
+	_hud_label.text = "%s — Room %d / %d — O2 %d / %d (-%d per room)" % [
 		mission_title,
 		room_num,
 		maxi(1, total),

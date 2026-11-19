@@ -109,15 +109,17 @@ func can_bond_attempt() -> bool:
 func player_attack() -> void:
 	if battle_over:
 		return
-	var lead := _lead()
-	if lead.is_empty() or lead.get("fainted", false):
+	var lead_idx := _first_living_ally_index()
+	if lead_idx < 0:
 		_log("Lead cannot act.")
+		_check_party_wipe()
+		state_changed.emit()
 		return
+	var lead: Dictionary = allies[lead_idx]
 	_resolve_player_strike(lead, _default_attack_power(lead))
-	for bond in allies:
-		if bond == lead:
-			continue
-		if bond.get("fainted", false):
+	for i in allies.size():
+		var bond: Dictionary = allies[i]
+		if i == lead_idx or bond.get("fainted", false):
 			continue
 		_resolve_player_strike(bond, int(round(_default_attack_power(bond) * 0.35)))
 	_wild_turn_if_alive()
@@ -182,6 +184,10 @@ func player_flee() -> void:
 	_log("> You retreat from the fight.")
 	battle_ended.emit(false, false)
 	state_changed.emit()
+
+
+func party_wiped() -> bool:
+	return _first_living_ally_index() < 0
 
 
 func get_wild_hp_ratio() -> float:
@@ -266,10 +272,16 @@ func _lead() -> Dictionary:
 
 
 func _first_living_ally() -> Dictionary:
-	for unit in allies:
+	var idx := _first_living_ally_index()
+	return allies[idx] if idx >= 0 else {}
+
+
+func _first_living_ally_index() -> int:
+	for i in allies.size():
+		var unit: Dictionary = allies[i]
 		if not unit.get("fainted", false) and int(unit.get("hp", 0)) > 0:
-			return unit
-	return {}
+			return i
+	return -1
 
 
 func _default_attack_power(unit: Dictionary) -> int:

@@ -80,6 +80,14 @@ godot --headless --path drift-tamers tests/phase3b_smoke.tscn
 
 60 checks over resources, fuel gating, payouts by outcome, module effects, morale tiers, release, and the save round trip. It clears `user://stable.json` before and after, so do not run it on a save you care about. Exit code is non-zero when a check fails.
 
+### Full test harness (what CI runs)
+
+```bash
+drift-tamers/tests/run_tests.sh   # needs Godot 4.3 as `godot` or GODOT=/path/to/godot
+```
+
+Runs the editor import, `tests/test_runner.tscn` (type chart, damage, bond odds, room deck, extract gating, O2 retreat, mission and species JSON), the Phase 3b ship smoke above, and `tests/smoke_run.tscn` once per mission. The smoke run boots `ship_hub.tscn`, deploys, and clicks through rooms and fights to the debrief. It fails on a non-zero exit or any engine `SCRIPT ERROR` / `ERROR` / `WARNING` line. Watch a run in a window with `godot --path drift-tamers tests/smoke_run.tscn -- --mission=bounty --seed=7 --step-delay=1.2`.
+
 ## Phase 3a manual test
 
 1. **F5** from `ship_hub.tscn` (main scene).
@@ -138,10 +146,8 @@ Locked stubs live in `data/missions/locked_manifest.json` (types 6–12).
 
 | Platform | Notes |
 |----------|--------|
-| **Web** | Project → Export → add **Web** preset; export for itch.io playtests (larger download; acceptable for hobby). |
+| **Web** | Committed **Web** preset in `export_presets.cfg`, thread support off so it runs on GitHub Pages without COOP/COEP headers. `godot --headless --path drift-tamers --export-release Web build/web/index.html`. The `pages.yml` workflow publishes it at `/drift-tamers/play/`. |
 | **Android** | Install Android build template / SDK via Godot editor, add **Android** preset, export APK or AAB for device tests. |
-
-Export presets are not committed in Phase 1; create them locally after installing export templates.
 
 ## Repository layout
 
