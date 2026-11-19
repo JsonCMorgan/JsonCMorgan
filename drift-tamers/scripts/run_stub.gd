@@ -17,7 +17,7 @@ func _ready() -> void:
 		_room_label.text = "No active mission. Return to ship."
 		_set_nav_enabled(false)
 		return
-	if int(GameState.run.get("o2", 0)) <= 0 and not bool(GameState.run.get("in_room", false)):
+	if int(GameState.run.get("o2", 0)) <= 0:
 		GameState.forced_o2_retreat()
 		get_tree().change_scene_to_file("res://scenes/ship_hub.tscn")
 		return
