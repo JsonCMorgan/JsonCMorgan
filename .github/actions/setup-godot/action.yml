@@ -1,0 +1,41 @@
+name: Setup Godot
+description: Install Godot 4.3 stable (Linux) and, optionally, the Web export templates.
+inputs:
+  web-templates:
+    description: Also install the Web (no-threads) export templates
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Cache Godot
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.godot-dl
+        key: godot-4.3-stable-linux-web-${{ inputs.web-templates }}
+
+    - name: Download Godot
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p ~/.godot-dl
+        cd ~/.godot-dl
+        base=https://github.com/godotengine/godot/releases/download/4.3-stable
+        curl -fsSL -o godot.zip "$base/Godot_v4.3-stable_linux.x86_64.zip"
+        unzip -q godot.zip && rm godot.zip
+        if [ "${{ inputs.web-templates }}" = "true" ]; then
+          curl -fsSL -o tpl.tpz "$base/Godot_v4.3-stable_export_templates.tpz"
+          unzip -q tpl.tpz 'templates/web_nothreads_*' 'templates/version.txt' && rm tpl.tpz
+        fi
+
+    - name: Install Godot
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo ln -sf ~/.godot-dl/Godot_v4.3-stable_linux.x86_64 /usr/local/bin/godot
+        if [ -d ~/.godot-dl/templates ]; then
+          mkdir -p ~/.local/share/godot/export_templates/4.3.stable
+          cp ~/.godot-dl/templates/* ~/.local/share/godot/export_templates/4.3.stable/
+        fi
+        godot --version

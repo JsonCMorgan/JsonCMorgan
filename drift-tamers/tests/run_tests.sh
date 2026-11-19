@@ -11,7 +11,7 @@ run() {
 	echo "::group::$label"
 	local log
 	log="$(mktemp)"
-	timeout 300 "$GODOT" --headless --path . "$@" 2>&1 | tee "$log"
+	timeout 120 "$GODOT" --headless --path . "$@" 2>&1 | tee "$log"
 	local code=${PIPESTATUS[0]}
 	echo "::endgroup::"
 	if [ "$code" -ne 0 ]; then
@@ -27,6 +27,7 @@ run() {
 
 run "import" --editor --quit
 run "unit tests" res://tests/test_runner.tscn
+run "phase3b ship smoke" res://tests/phase3b_smoke.tscn
 for mission in survey rescue recovery bounty escort; do
 	run "smoke: $mission" res://tests/smoke_run.tscn -- --mission="$mission"
 done

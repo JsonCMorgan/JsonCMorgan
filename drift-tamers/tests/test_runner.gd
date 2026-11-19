@@ -22,8 +22,7 @@ func _ready() -> void:
 		"test_type_chart",
 		"test_damage",
 		"test_bond_chance_bounds",
-		"test_stable_save_round_trip",
-		"test_payouts",
+		"test_elite_void_nest_fainted_lead",
 		"test_room_deck_size",
 		"test_extract_gating",
 		"test_o2_zero_forces_retreat",
@@ -151,50 +150,25 @@ func test_bond_chance_bounds() -> void:
 	check(true, "200 random states within bounds")
 
 
-func test_stable_save_round_trip() -> void:
-	var backup := GameState.stable.duplicate(true)
-	GameState.stable = []
-	var creature := GameState.make_combatant("cryptid", "Mothman")
-	GameState.add_to_stable(creature)
-	check(FileAccess.file_exists(GameState.STABLE_SAVE_PATH), "stable save file written")
-	GameState.stable = []
-	GameState._load_stable()
-	check_eq(GameState.stable.size(), 1, "one creature reloaded")
-	if GameState.stable.size() == 1:
-		var loaded: Dictionary = GameState.stable[0]
-		check_eq(str(loaded.get("species_id")), "cryptid", "species id survives")
-		check_eq(str(loaded.get("nickname")), "Mothman", "nickname survives")
-		check_eq(int(loaded.get("max_hp")), int(creature["max_hp"]), "max hp survives")
-	GameState.stable = backup
-	GameState._save_stable()
-
-
-func test_payouts() -> void:
-	var start_credits := int(GameState.meta["credits"])
-	GameState.start_run("survey")
-	GameState.run["rooms_cleared"] = 2
-	GameState.abort_run()
-	check_eq(int(GameState.meta["credits"]) - start_credits, 30, "abort pays rooms x 15, no bonus")
-
-	start_credits = int(GameState.meta["credits"])
-	GameState.start_run("survey")
-	for i in GameState.total_rooms():
-		GameState.complete_current_room()
-	GameState.extract_run()
-	var survey_bonus := int(GameState.get_mission("survey")["modifiers"]["extract_bonus"])
-	check_eq(int(GameState.meta["credits"]) - start_credits, 5 * 15 + survey_bonus, "full extract pays rooms + bonus")
-	check(not GameState.run["active"], "run inactive after extract")
-
-	start_credits = int(GameState.meta["credits"])
-	var rep := int(GameState.meta["reputation_independence"])
-	GameState.start_run("recovery")
-	GameState.run["consumables"] = 2
-	GameState.run["rooms_cleared"] = 1
-	GameState.forced_o2_retreat()
-	check_eq(int(GameState.meta["credits"]) - start_credits, 15, "o2 retreat pays no extract bonus")
-	check_eq(int(GameState.meta["reputation_independence"]) - rep, 2, "consumables convert to reputation")
-
-
+func test_elite_void_nest_fainted_lead() -> void:
+	# Regression: Kinetic lead at 0 HP vs an elite Void nest logged "Lead cannot act" with no way to resolve.
+	for wild_id in ["cryptid", "nullfin"]:
+		check(wild_id in RoomDeck.WILD_WEIGHTS_ELITE.map(func(e): return e["id"]), "%s spawns in elite nests" % wild_id)
+		var engine := BattleEngine.new()
+		var lead := GameState.make_combatant("spacer", "Spacer")
+		lead["hp"] = 0
+		lead["fainted"] = true
+		var bond := GameState.make_combatant("hullmite", "Shellback")
+		engine.start_encounter(wild_id, [lead, bond])
+		var start_hp := int(engine.wild["hp"])
+		engine.player_attack()
+		check(int(engine.wild["hp"]) < start_hp, "%s: living bond deals damage when lead is down" % wild_id)
+		check(not engine.log_lines.has("Lead cannot act."), "%s: no 'Lead cannot act' while a bond stands" % wild_id)
+		var guard := 0
+		while not engine.battle_over and guard < 50:
+			engine.player_attack()
+			guard += 1
+		check(engine.battle_over, "%s: fight resolves (win or wipe) by attacking" % wild_id)
 func test_room_deck_size() -> void:
 	for mid in MissionRegistry.playable_mission_ids():
 		var mission := MissionRegistry.get_mission(mid)

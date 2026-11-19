@@ -9,7 +9,7 @@ var is_driver := false
 var _mission_id := "survey"
 var _step_delay := 0.0
 var _seed := 42
-var _stable_backup: Array = []
+var _save_backup: Variant = null
 
 
 func _ready() -> void:
@@ -20,7 +20,8 @@ func _ready() -> void:
 		driver.name = "SmokeDriver"
 		get_tree().root.add_child.call_deferred(driver)
 		return
-	_stable_backup = GameState.stable.duplicate(true)
+	if FileAccess.file_exists(GameState.STABLE_SAVE_PATH):
+		_save_backup = FileAccess.get_file_as_string(GameState.STABLE_SAVE_PATH)
 	get_tree().create_timer(WATCHDOG_SEC).timeout.connect(_expect.bind(false, "watchdog timeout"))
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--mission="):
@@ -30,6 +31,8 @@ func _ready() -> void:
 		elif arg.begins_with("--seed="):
 			_seed = int(arg.trim_prefix("--seed="))
 	seed(_seed)
+	# Repeated smoke runs share one save slot, so never let fuel block the deploy under test.
+	GameState.meta["fuel"] = maxi(GameState.resource_amount("fuel"), GameState.mission_fuel_cost(_mission_id))
 	_run.call_deferred()
 
 
@@ -153,6 +156,9 @@ func _expect(cond: bool, msg: String) -> bool:
 
 
 func _exit_tree() -> void:
-	if is_driver:
-		GameState.stable = _stable_backup
-		GameState._save_stable()
+	if not is_driver:
+		return
+	if _save_backup == null:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(GameState.STABLE_SAVE_PATH))
+	else:
+		FileAccess.open(GameState.STABLE_SAVE_PATH, FileAccess.WRITE).store_string(_save_backup)
