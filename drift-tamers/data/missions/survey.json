@@ -21,6 +21,14 @@
     "extract_bonus": 30,
     "scan_room_bias": true
   },
+  "costs": {
+    "fuel": 10
+  },
+  "payout": {
+    "win": { "credits": 110, "parts": 1, "research": 4, "morale": 6 },
+    "partial": { "credits": 55, "parts": 1, "research": 2, "morale": 1 },
+    "fail": { "credits": 15, "parts": 0, "research": 1, "morale": -8 }
+  },
   "win_flags": {
     "primary": "data_scanned",
     "win_min_rooms": 4

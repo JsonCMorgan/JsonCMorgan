@@ -29,12 +29,13 @@ func _refresh_ui() -> void:
 	var mission_title := str(mission.get("display_name", "Mission"))
 	var room_num := int(GameState.run.get("room_index", 0)) + 1
 	var total := GameState.total_rooms()
-	_hud_label.text = "%s — Room %d / %d — O₂ %d / %d" % [
+	_hud_label.text = "%s — Room %d / %d — O₂ %d / %d (-%d per room)" % [
 		mission_title,
 		room_num,
 		maxi(1, total),
 		int(GameState.run.get("o2", 0)),
 		int(GameState.run.get("o2_max", GameState.O2_START)),
+		GameState.o2_cost_per_room(),
 	]
 	_extract_button.disabled = not GameState.can_extract()
 	_abort_button.disabled = false
@@ -55,6 +56,8 @@ func _refresh_ui() -> void:
 
 	if not in_room:
 		_room_label.text = "Approaching: %s\n%s" % [title, blurb]
+		if _last_effect_line != "":
+			_room_label.text += "\n\n" + _last_effect_line
 		_step_button.visible = true
 		_step_button.text = "Step into room %d" % room_num
 		_fight_button.visible = false
@@ -100,8 +103,7 @@ func _on_fight_pressed() -> void:
 
 
 func _on_continue_pressed() -> void:
-	GameState.complete_current_room()
-	_last_effect_line = ""
+	_last_effect_line = GameState.complete_current_room()
 	if int(GameState.run.get("o2", 0)) <= 0:
 		GameState.forced_o2_retreat()
 		get_tree().change_scene_to_file("res://scenes/ship_hub.tscn")

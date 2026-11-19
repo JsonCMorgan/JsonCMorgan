@@ -21,6 +21,14 @@
     "extract_bonus": 35,
     "rest_weight_bonus": 2
   },
+  "costs": {
+    "fuel": 12
+  },
+  "payout": {
+    "win": { "credits": 130, "parts": 2, "research": 1, "morale": 12 },
+    "partial": { "credits": 65, "parts": 1, "research": 0, "morale": 2 },
+    "fail": { "credits": 20, "parts": 0, "research": 0, "morale": -12 }
+  },
   "win_flags": {
     "primary": "survivors_evacuated",
     "win_min_rooms": 4,
