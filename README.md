@@ -15,6 +15,7 @@ Client-facing technical support background → building toward **junior SOC / cy
 | [boundry-ai-soc-platform](https://github.com/JsonCMorgan/boundry-ai-soc-platform) | Hands-on SOC workflow thinking: alert triage, investigation notes, reporting, SIEM-style event feed practice |
 | [security-onion-lab](https://github.com/JsonCMorgan/security-onion-lab) | Network security monitoring / detection practice in a home lab |
 | [juice-shop-lab](https://github.com/JsonCMorgan/juice-shop-lab) | OWASP Top 10 practice with remediation and detection notes |
+| [soc-detection-rules](https://github.com/JsonCMorgan/soc-detection-rules) | Detection-as-code: 12 Sigma rules with Splunk + Sentinel conversion tests in CI |
 
 Framing for employers: these are **portfolio / lab builds** that show how I learn security operations. Not a pitch for a competing security vendor.
 
