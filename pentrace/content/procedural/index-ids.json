@@ -1,0 +1,14 @@
+{
+  "indexEntryIds": [
+    "port-scanning",
+    "ssh-credential-attacks",
+    "weak-default-creds",
+    "web-enumeration",
+    "privilege-escalation",
+    "covering-tracks",
+    "log-analysis",
+    "the-trace",
+    "firewall-rules",
+    "ftp-anonymous"
+  ]
+}

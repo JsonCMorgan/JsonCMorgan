@@ -1,0 +1,87 @@
+{
+  "id": "d2-scanner-fp",
+  "ticketId": "BT-2026-0101",
+  "title": "Noisy Neighbor: Approved Scanner",
+  "client": "Harbor",
+  "expectedDisposition": "fp",
+  "mitre": "T1046",
+  "slaMinutes": 30,
+  "xp": 50,
+  "socsearchOutput": [
+    "search index=firewall earliest=-2h client=Harbor action=deny",
+    "| stats dc(dest_port) as ports, count by src_ip",
+    "",
+    "src_ip          ports   count",
+    "192.0.2.25      1012    3871",
+    "",
+    "NOTE: one source touched 1,012 ports in 40 minutes. Check it against the scanner allowlist before you panic."
+  ],
+  "caseFiles": [
+    {
+      "path": "/home/ghost/cases/harbor-fw.log",
+      "lines": [
+        "Nov 10 02:14:01 harbor-edge kernel: FW-DROP: IN=eth0 SRC=192.0.2.25 DST=10.40.0.8 PROTO=TCP DPT=21",
+        "Nov 10 02:14:01 harbor-edge kernel: FW-DROP: IN=eth0 SRC=192.0.2.25 DST=10.40.0.8 PROTO=TCP DPT=22",
+        "Nov 10 02:14:01 harbor-edge kernel: FW-DROP: IN=eth0 SRC=192.0.2.25 DST=10.40.0.8 PROTO=TCP DPT=23",
+        "Nov 10 02:14:02 harbor-edge kernel: FW-DROP: IN=eth0 SRC=192.0.2.25 DST=10.40.0.8 PROTO=TCP DPT=25",
+        "Nov 10 02:14:02 harbor-edge kernel: FW-DROP: IN=eth0 SRC=192.0.2.25 DST=10.40.0.8 PROTO=TCP DPT=80",
+        "Nov 10 02:14:02 harbor-edge kernel: FW-DROP: IN=eth0 SRC=192.0.2.25 DST=10.40.0.8 PROTO=TCP DPT=443",
+        "Nov 10 02:14:03 harbor-edge kernel: FW-DROP: IN=eth0 SRC=192.0.2.25 DST=10.40.0.8 PROTO=TCP DPT=3389",
+        "Nov 10 02:54:40 harbor-edge kernel: FW-DROP: IN=eth0 SRC=192.0.2.25 DST=10.40.0.9 PROTO=TCP DPT=8443",
+        "... 3,863 more lines like these ..."
+      ]
+    },
+    {
+      "path": "/home/ghost/cases/scanner-allowlist.txt",
+      "lines": [
+        "HARBOR // approved scanning sources (owner: Harbor vuln mgmt)",
+        "",
+        "range            tool                 window                change",
+        "192.0.2.16/28    weekly vuln scanner  Tue 02:00-04:00 UTC   CHG-4471",
+        "198.51.100.200   pentest vendor       2026-12-01 only       CHG-4502",
+        "",
+        "192.0.2.16/28 covers 192.0.2.16 through 192.0.2.31.",
+        "Anything in an approved range, inside its window, is expected noise: close as FP and cite the change ticket."
+      ]
+    }
+  ],
+  "noteEvidence": [
+    {
+      "label": "scanner IP",
+      "any": [
+        "192.0.2.25"
+      ]
+    },
+    {
+      "label": "allowlist or change ticket",
+      "any": [
+        "CHG-4471",
+        "allowlist",
+        "approved"
+      ]
+    },
+    {
+      "label": "scan window",
+      "any": [
+        "02:",
+        "window",
+        "Tue"
+      ]
+    }
+  ],
+  "noteSuggestion": "192.0.2.25 is the approved vuln scanner (allowlist 192.0.2.16/28, CHG-4471), inside the Tue 02:00-04:00 window",
+  "wrong": {
+    "tp": "Called the approved scanner a true positive. 192.0.2.25 sits inside 192.0.2.16/28 on the allowlist (CHG-4471) during its window. That is a false positive, and now the scan team is blocked.",
+    "escalate": "Escalated expected scanner noise to L2. Checking the allowlist is the L1 job here: false positive, cite CHG-4471."
+  },
+  "triageBullets": [
+    "A port sweep from one IP looks scary, but approved scanners do exactly that.",
+    "The allowlist and change ticket prove it was expected.",
+    "Tuning idea: suppress this alert for the approved range during the scan window."
+  ],
+  "lessons": [
+    "Scary-looking traffic can be expected. Check allowlists and change tickets before you call it an attack.",
+    "A false positive close still needs evidence in the note: the IP, the approved range and the change ticket.",
+    "Repeated false positives point to a tuning fix scoped to the source range and the time window."
+  ]
+}

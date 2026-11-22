@@ -1,0 +1,70 @@
+{
+  "id": "d1-sla-spray",
+  "ticketId": "BT-2026-0103",
+  "title": "SLA Race: Password Spray",
+  "client": "NorthPeak",
+  "expectedDisposition": "tp",
+  "expectedIoc": "203.0.113.44",
+  "mitre": "T1110.003",
+  "slaMinutes": 12,
+  "xp": 60,
+  "socsearchOutput": [
+    "search index=auth earliest=-4h client=NorthPeak",
+    "| stats count by src_ip, action",
+    "",
+    "src_ip          action    count",
+    "203.0.113.44    Failed    412",
+    "203.0.113.44    Accepted  1",
+    "",
+    "NOTE: 412 failures followed by 1 success from one source: classic password spray."
+  ],
+  "caseFiles": [
+    {
+      "path": "/home/ghost/cases/northpeak-auth.log",
+      "lines": [
+        "Mar 12 06:48:01 finance-ws-02 sshd[1842]: Failed password for admin from 203.0.113.44 port 44012 ssh2",
+        "Mar 12 06:48:02 finance-ws-02 sshd[1842]: Failed password for admin from 203.0.113.44 port 44012 ssh2",
+        "Mar 12 06:48:02 finance-ws-02 sshd[1843]: Failed password for invalid user oracle from 203.0.113.44 port 44013 ssh2",
+        "Mar 12 06:48:03 finance-ws-02 sshd[1844]: Failed password for root from 203.0.113.44 port 44014 ssh2",
+        "Mar 12 06:49:14 finance-ws-02 sshd[1842]: Accepted password for admin from 203.0.113.44 port 44012 ssh2",
+        "Mar 12 06:49:15 finance-ws-02 sshd[1842]: pam_unix(sshd:session): session opened for user admin by (uid=0)"
+      ]
+    }
+  ],
+  "noteEvidence": [
+    {
+      "label": "source IP",
+      "any": [
+        "203.0.113.44"
+      ]
+    },
+    {
+      "label": "account",
+      "any": [
+        "admin"
+      ]
+    },
+    {
+      "label": "time window",
+      "any": [
+        "06:48",
+        "06:49"
+      ]
+    }
+  ],
+  "noteSuggestion": "spray from 203.0.113.44 against admin 06:48-06:49, 1 Accepted",
+  "wrong": {
+    "fp": "Closed as false positive, but the spray was real: hundreds of failures then an Accepted from one IP is textbook T1110.003.",
+    "escalate": "Escalated a ticket L1 owns. A server spray with a clear source is a true positive: document the IOC so the firewall team can block it."
+  },
+  "triageBullets": [
+    "Pattern: failed SSH spray then a single Accepted from one external IP.",
+    "No matching change ticket, so it is not a VPN flap.",
+    "Recommend: block the source, force MFA, reset the affected account."
+  ],
+  "lessons": [
+    "Hundreds of failures then one success from a single external IP is a confirmed password spray (T1110.003).",
+    "A true positive needs a documented IOC so the firewall team can block the source.",
+    "Work the CRITICAL ticket first. SLA clocks keep running while you chase lower-priority noise."
+  ]
+}

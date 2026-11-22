@@ -1,0 +1,16 @@
+# (ISC)² SSCP domain labels for mission tagging (education only, not an official mapping).
+domains:
+  - id: 1
+    label: Security Operations and Administration
+  - id: 2
+    label: Access Controls
+  - id: 3
+    label: Risk Identification, Monitoring, and Analysis
+  - id: 4
+    label: Incident Response and Recovery
+  - id: 5
+    label: Cryptography
+  - id: 6
+    label: Network and Communications Security
+  - id: 7
+    label: Systems and Application Security
