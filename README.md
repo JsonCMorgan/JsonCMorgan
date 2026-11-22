@@ -1,44 +1,33 @@
 # Jason Morgan
 
-Client-facing technical support background → building toward **junior SOC / cybersecurity analyst** roles in Canada.
+I'm Jason. I live in the GTA, I'm ISC² CC certified, and I finished York's Advanced Cyber Security program in 2024. By day I do client-facing technical support and triage (Legal Aid Ontario today, and a long stretch of high-volume ops at Rogers before that). Nights and weekends I'm building toward security operations work because that's where I want my career to go.
 
-## Two-minute verification (hiring managers)
+I spent close to ten years on the door at bars and venues. That's not a random footnote. A bouncer and a SOC analyst do a lot of the same job. You read the room, you catch the bad move early, and you stay calm when something actually kicks off.
 
-1. Confirm [boundry-ai-soc-platform CI](https://github.com/JsonCMorgan/boundry-ai-soc-platform/actions) is green on `main`.
-2. Open [soc-detection-rules](https://github.com/JsonCMorgan/soc-detection-rules): read the MITRE table; check CI badge.
-3. Skim one sanitized ticket: [security-onion-lab/tickets](https://github.com/JsonCMorgan/security-onion-lab/tree/main/tickets) or [juice-shop-lab/tickets](https://github.com/JsonCMorgan/juice-shop-lab/tree/main/tickets).
-4. Full skim guide: [boundry-ai-soc-platform `docs/PORTFOLIO_VERIFICATION_GUIDE.md`](https://github.com/JsonCMorgan/boundry-ai-soc-platform/blob/main/docs/PORTFOLIO_VERIFICATION_GUIDE.md) (after next flagship push).
+## What I'm building on GitHub
 
-**Pins (set on github.com/JsonCMorgan):** `boundry-ai-soc-platform`, `soc-detection-rules`, `security-onion-lab`, `juice-shop-lab` (order matters for the cyber story).
+These repos are **mine**. They're labs and practice builds so I can work alerts, write detections, and document incidents like I would on a real floor. I'm not pretending this is a vendor product pitch. It's how I learn out loud.
 
-**Honesty:** Portfolio and home-lab work, not a claim of years in enterprise SOC.
-
-- 👋 Based in the Greater Toronto Area (remote / hybrid OK)
-- 🛡️ ISC² Certified in Cybersecurity (CC) · York University Certificate in Advanced Cyber Security (2024)
-- 🧰 Recent work: L1/L2 multi-channel support and triage at Legal Aid Ontario (PeopleSoft), plus 20+ years high-volume ops at Rogers
-- 🔭 Practice proof: Boundry.AI SOC tooling, Security Onion lab, OWASP Juice Shop AppSec lab
-- 📫 json.c.morgan@gmail.com · [LinkedIn](https://www.linkedin.com/in/jason-morgan-110656289/)
-
-## What to look at first (hiring managers)
-
-| Repo | What it shows |
+| Repo | What's in it |
 |---|---|
-| [boundry-ai-soc-platform](https://github.com/JsonCMorgan/boundry-ai-soc-platform) | Hands-on SOC workflow thinking: alert triage, investigation notes, reporting, SIEM-style event feed practice |
-| [security-onion-lab](https://github.com/JsonCMorgan/security-onion-lab) | Network security monitoring / detection practice in a home lab |
-| [juice-shop-lab](https://github.com/JsonCMorgan/juice-shop-lab) | OWASP Top 10 practice with remediation and detection notes |
-| [soc-detection-rules](https://github.com/JsonCMorgan/soc-detection-rules) | Detection-as-code: 12 Sigma rules, MITRE tags, Splunk + Sentinel CI tests |
+| [boundry-ai-soc-platform](https://github.com/JsonCMorgan/boundry-ai-soc-platform) | My home SOC practice stack: SIEM-style events, tickets, reports, training drills. Local AI first, privacy matters to me. |
+| [soc-detection-rules](https://github.com/JsonCMorgan/soc-detection-rules) | Sigma rules I wrote and test in CI (Splunk + Sentinel conversions, MITRE tags). |
+| [security-onion-lab](https://github.com/JsonCMorgan/security-onion-lab) | NSM practice: logs, PCAP exercises, incident write-ups. |
+| [juice-shop-lab](https://github.com/JsonCMorgan/juice-shop-lab) | OWASP Juice Shop blue-team notes, detections, remediation practice. |
 
-Framing for employers: these are **portfolio / lab builds** that show how I learn security operations. Not a pitch for a competing security vendor.
+If you only open one thing, start with **boundry-ai-soc-platform**. The README and screenshots there are the spine. The other three are specialty proof: network, AppSec, and detection-as-code.
 
-## Open to
-
-- Junior SOC Analyst / Junior Cybersecurity Analyst / Security Operations Analyst
-- Technical / product / client support roles (cash-flow Track B) while I grow into cyber
+**Straight talk:** This is portfolio and home-lab work. I'm honest about being early in my cyber career. The code and docs are here so anyone can see how I think and how I practice.
 
 ## Cafe drills (phone quiz)
 
-See [`cafe-quiz/`](./cafe-quiz/) for a mobile PWA: flashcards + multiple choice on Boundry talk track, SOC jargon, and honest junior framing.
+I keep a tiny PWA in [`cafe-quiz/`](./cafe-quiz/) for flashcards and multiple-choice drills when I'm away from the desk. SOC jargon, Boundry talk track, stuff I want to remember cold.
+
+## Find me
+
+- 📫 json.c.morgan@gmail.com
+- [LinkedIn](https://www.linkedin.com/in/jason-morgan-110656289/)
 
 ---
 
-Thanks for visiting.
+Thanks for stopping by.
