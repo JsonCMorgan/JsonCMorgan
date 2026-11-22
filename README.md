@@ -2,6 +2,17 @@
 
 Client-facing technical support background → building toward **junior SOC / cybersecurity analyst** roles in Canada.
 
+## Two-minute verification (hiring managers)
+
+1. Confirm [boundry-ai-soc-platform CI](https://github.com/JsonCMorgan/boundry-ai-soc-platform/actions) is green on `main`.
+2. Open [soc-detection-rules](https://github.com/JsonCMorgan/soc-detection-rules): read the MITRE table; check CI badge.
+3. Skim one sanitized ticket: [security-onion-lab/tickets](https://github.com/JsonCMorgan/security-onion-lab/tree/main/tickets) or [juice-shop-lab/tickets](https://github.com/JsonCMorgan/juice-shop-lab/tree/main/tickets).
+4. Full skim guide: [boundry-ai-soc-platform `docs/PORTFOLIO_VERIFICATION_GUIDE.md`](https://github.com/JsonCMorgan/boundry-ai-soc-platform/blob/main/docs/PORTFOLIO_VERIFICATION_GUIDE.md) (after next flagship push).
+
+**Pins (set on github.com/JsonCMorgan):** `boundry-ai-soc-platform`, `soc-detection-rules`, `security-onion-lab`, `juice-shop-lab` (order matters for the cyber story).
+
+**Honesty:** Portfolio and home-lab work, not a claim of years in enterprise SOC.
+
 - 👋 Based in the Greater Toronto Area (remote / hybrid OK)
 - 🛡️ ISC² Certified in Cybersecurity (CC) · York University Certificate in Advanced Cyber Security (2024)
 - 🧰 Recent work: L1/L2 multi-channel support and triage at Legal Aid Ontario (PeopleSoft), plus 20+ years high-volume ops at Rogers
@@ -15,7 +26,7 @@ Client-facing technical support background → building toward **junior SOC / cy
 | [boundry-ai-soc-platform](https://github.com/JsonCMorgan/boundry-ai-soc-platform) | Hands-on SOC workflow thinking: alert triage, investigation notes, reporting, SIEM-style event feed practice |
 | [security-onion-lab](https://github.com/JsonCMorgan/security-onion-lab) | Network security monitoring / detection practice in a home lab |
 | [juice-shop-lab](https://github.com/JsonCMorgan/juice-shop-lab) | OWASP Top 10 practice with remediation and detection notes |
-| [soc-detection-rules](https://github.com/JsonCMorgan/soc-detection-rules) | Detection-as-code: 12 Sigma rules with Splunk + Sentinel conversion tests in CI |
+| [soc-detection-rules](https://github.com/JsonCMorgan/soc-detection-rules) | Detection-as-code: 12 Sigma rules, MITRE tags, Splunk + Sentinel CI tests |
 
 Framing for employers: these are **portfolio / lab builds** that show how I learn security operations. Not a pitch for a competing security vendor.
 
